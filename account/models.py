@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from datetime import date
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -39,6 +40,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default='tier1'
     )
     referral_code = models.CharField(max_length=50, blank=True, null=True)
+    membership_start_date = models.DateField(null=True, blank=True)
+    membership_end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
@@ -49,3 +52,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    @property
+    def is_membership_active(self):
+        """Check if the user's membership is currently active."""
+        if self.membership_end_date:
+            return self.membership_end_date >= date.today()
+        return False

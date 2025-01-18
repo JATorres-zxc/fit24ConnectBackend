@@ -4,7 +4,7 @@ from .models import CustomUser
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    list_display = ('email', 'full_name', 'is_active', 'is_staff')
+    list_display = ('email', 'full_name', 'is_active', 'is_staff', 'type_of_membership', 'is_membership_active')
     list_filter = ('is_staff', 'is_superuser', 'is_active')
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
