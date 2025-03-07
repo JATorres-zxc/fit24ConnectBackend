@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'account',
     'facility',
     'announcement',
+    'mealPlan',
     
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
