@@ -39,15 +39,17 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = authenticate(email=data['email'], password=data['password'])
+        user = authenticate(email=data["email"], password=data["password"])
         if not user:
             raise serializers.ValidationError("Invalid credentials")
         if not user.is_active:
             raise serializers.ValidationError("User account is inactive")
 
+        tokens = self.get_tokens_for_user(user)
+
         return {
             "user": user,
-            "tokens": self.get_tokens_for_user(user)
+            "tokens": tokens,
         }
 
     def get_tokens_for_user(self, user):
@@ -56,8 +58,8 @@ class LoginSerializer(serializers.Serializer):
         """
         refresh = RefreshToken.for_user(user)
         return {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
         }
 
 
