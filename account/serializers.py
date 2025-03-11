@@ -9,42 +9,28 @@ User = get_user_model()
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = CustomUser
-        fields = [
-            'email', 'password', 'referral_code', 'full_name',
-            'contact_number', 'messenger_account', 'complete_address',
-            'nationality', 'birthdate', 'gender', 'type_of_membership'
-        ]
-        extra_kwargs = {
-            'password': {'write_only': True},
-        }
+        model = User
+        fields = ['email', 'password', 'confirm_password']
+        extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, data):
-        # Check for existing email
-        if CustomUser.objects.filter(email=data['email']).exists():
-            raise serializers.ValidationError({"email": "A user with this email already exists."})
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({"email": "A user with this email already exists."})
+
         return data
 
     def create(self, validated_data):
         with transaction.atomic():
-            # Create the user using create_user to ensure password hashing
-            user = CustomUser.objects.create_user(
+            user = User.objects.create_user(
                 email=validated_data['email'],
                 password=validated_data['password'],
-                full_name=validated_data['full_name'],
-                contact_number=validated_data['contact_number'],
-                messenger_account=validated_data.get('messenger_account'),
-                complete_address=validated_data['complete_address'],
-                nationality=validated_data['nationality'],
-                birthdate=validated_data['birthdate'],
-                gender=validated_data['gender'],
-                type_of_membership=validated_data['type_of_membership'],
-                referral_code=validated_data.get('referral_code'),
             )
-        
         return user
 
 
