@@ -27,13 +27,17 @@ class CustomUserManager(BaseUserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    full_name = models.CharField(max_length=255)
-    contact_number = models.CharField(max_length=15)
+    full_name = models.CharField(max_length=255, null=True, blank=True)  # Optional
+    contact_number = models.CharField(max_length=15, null=True, blank=True)  # Optional
     messenger_account = models.CharField(max_length=255, blank=True, null=True)
-    complete_address = models.TextField()
-    nationality = models.CharField(max_length=100)
-    birthdate = models.DateField()
-    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    complete_address = models.TextField(null=True, blank=True)  # Optional
+    nationality = models.CharField(max_length=100, null=True, blank=True)  # Optional
+    birthdate = models.DateField(null=True, blank=True)  # Optional
+    gender = models.CharField(
+        max_length=10, 
+        choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')],
+        null=True, blank=True  # Optional
+    )
     type_of_membership = models.CharField(
         max_length=10,
         choices=[('tier1', 'Tier 1'), ('tier2', 'Tier 2'), ('tier3', 'Tier 3')],
@@ -46,7 +50,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['full_name']
+    REQUIRED_FIELDS = []  # Removed 'full_name' from required fields
 
     objects = CustomUserManager()
 
