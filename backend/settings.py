@@ -92,6 +92,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",  # replace with frontend's url(idk currently what's the url)
 ]
 
+ALLOWED_HOSTS = ["*"]
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'backend.urls'
