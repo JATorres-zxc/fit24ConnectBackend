@@ -32,10 +32,12 @@ class Facility(models.Model):
         self.qr_code.save(f"facility_{self.id}.png", ContentFile(buffer.getvalue()), save=False)
 
     def save(self, *args, **kwargs):
-        """Override save to generate a QR code automatically when creating/updating a facility."""
-        super().save(*args, **kwargs)  # Save first to get an ID
-        self.generate_qr_code()  # Generate QR
-        super().save(*args, **kwargs)  # Save again to store the QR code
+        """Generate QR code only after the object is saved."""
+        if not self.pk:  # Only run before the first save
+            super().save(*args, **kwargs)
+        self.generate_qr_code()
+        super().save(update_fields=['qr_code'])  # Save only the QR code field
+
 
 class AccessLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
