@@ -1,19 +1,19 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate, get_user_model
-from .models import CustomUser
+from .models import CustomUser, Trainer
 from django.db import transaction
 from rest_framework_simplejwt.tokens import RefreshToken
-
 
 User = get_user_model()
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+    is_trainer = serializers.BooleanField(default=False)
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'confirm_password']
+        fields = ['email', 'password', 'confirm_password', 'is_trainer']
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, data):
@@ -26,13 +26,32 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        is_trainer = validated_data.pop('is_trainer', False)
         with transaction.atomic():
             user = User.objects.create_user(
                 email=validated_data['email'],
                 password=validated_data['password'],
+                is_trainer=is_trainer
             )
+            # If user is a trainer, create a trainer profile
+            if is_trainer:
+                Trainer.objects.create(user=user, experience="", contact_no="")
+
         return user
 
+class TrainerSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_trainer=True))
+
+    class Meta:
+        model = Trainer
+        fields = '__all__'
+
+class UserSerializer(serializers.ModelSerializer):
+    trainer_profile = TrainerSerializer(read_only=True)  # Include trainer details if applicable
+
+    class Meta:
+        model = User
+        fields = ["id", "email", "full_name", "is_trainer", "trainer_profile"]
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -53,9 +72,7 @@ class LoginSerializer(serializers.Serializer):
         }
 
     def get_tokens_for_user(self, user):
-        """
-        Generate and return refresh and access tokens for the user
-        """
+        """Generate and return refresh and access tokens for the user"""
         refresh = RefreshToken.for_user(user)
         return {
             "refresh": str(refresh),
