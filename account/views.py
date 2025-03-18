@@ -40,7 +40,8 @@ class LoginView(APIView):
                 "id": user.id,
                 "email": user.email,
                 "full_name": user.full_name,
-                "is_trainer": user.is_trainer,
+                # "is_trainer": user.is_trainer,
+                "role":user.role
             }
 
             # Include trainer details if the user is a trainer

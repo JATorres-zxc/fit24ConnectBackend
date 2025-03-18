@@ -50,6 +50,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_trainer = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -65,6 +66,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         if self.membership_end_date:
             return self.membership_end_date >= date.today()
         return False
+    
+    @property
+    def role(self):
+        if self.is_admin:
+            return "admin"
+        elif self.is_trainer:
+            return "trainer"
+        return "user"
 
 class Trainer(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="trainer_profile")
