@@ -27,16 +27,16 @@ class CustomUserManager(BaseUserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    full_name = models.CharField(max_length=255, null=True, blank=True)  # Optional
-    contact_number = models.CharField(max_length=15, null=True, blank=True)  # Optional
+    full_name = models.CharField(max_length=255, null=True, blank=True)
+    contact_number = models.CharField(max_length=15, null=True, blank=True)
     messenger_account = models.CharField(max_length=255, blank=True, null=True)
-    complete_address = models.TextField(null=True, blank=True)  # Optional
-    nationality = models.CharField(max_length=100, null=True, blank=True)  # Optional
-    birthdate = models.DateField(null=True, blank=True)  # Optional
+    complete_address = models.TextField(null=True, blank=True)
+    nationality = models.CharField(max_length=100, null=True, blank=True)
+    birthdate = models.DateField(null=True, blank=True)
     gender = models.CharField(
         max_length=10, 
         choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')],
-        null=True, blank=True  # Optional
+        null=True, blank=True
     )
     type_of_membership = models.CharField(
         max_length=10,
@@ -46,11 +46,18 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     referral_code = models.CharField(max_length=50, blank=True, null=True)
     membership_start_date = models.DateField(null=True, blank=True)
     membership_end_date = models.DateField(null=True, blank=True)
+    
+    height = models.FloatField(null=True, blank=True)
+    weight = models.FloatField(null=True, blank=True)
+    age = models.PositiveIntegerField(null=True, blank=True)
+    
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_trainer = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []  # Removed 'full_name' from required fields
+    REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
 
@@ -63,3 +70,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         if self.membership_end_date:
             return self.membership_end_date >= date.today()
         return False
+    
+    @property
+    def role(self):
+        if self.is_admin:
+            return "admin"
+        elif self.is_trainer:
+            return "trainer"
+        return "user"
+
+class Trainer(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="trainer_profile")
+    experience = models.TextField()
+    contact_no = models.CharField(max_length=15)
+
+    def __str__(self):
+        return self.user.full_name or self.user.email

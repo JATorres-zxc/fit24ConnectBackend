@@ -5,31 +5,32 @@ from .models import Facility, AccessLog
 from .serializers import QRScanSerializer, AccessLogSerializer
 from datetime import date
 from django.utils.timezone import now
-
+import json
 
 class QRScanView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = QRScanSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({'error': 'Invalid data'}, status=400)
+        # Extract the raw QR code data
+        qr_code_data = request.data.get("qrCode", None)
 
-        facility_id = serializer.validated_data['facility_id']
+        if not qr_code_data:
+            return Response({'error': 'QR Code data is missing'}, status=400)
+
+        try:
+            # Parse JSON string inside `qrCode`
+            qr_data = json.loads(qr_code_data)
+            facility_id = qr_data.get("id")  # Extract facility ID
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return Response({'error': 'Invalid QR code format'}, status=400)
+
         user = request.user
 
+        # Validate facility existence
         try:
             facility = Facility.objects.get(id=facility_id)
         except Facility.DoesNotExist:
             return Response({'error': 'Facility not found'}, status=404)
-
-        # Skip membership status check for testing purposes
-        # if not user.is_membership_active:
-        #     reason = "Expired membership"
-        #     AccessLog.objects.create(
-        #         user=user, facility=facility, status='failed', reason=reason
-        #     )
-        #     return Response({'status': 'failed', 'reason': reason}, status=403)
 
         # Check membership tier
         if user.type_of_membership != facility.required_tier:

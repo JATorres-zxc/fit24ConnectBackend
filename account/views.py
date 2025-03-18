@@ -4,9 +4,9 @@ from rest_framework import status, serializers
 from django.contrib.auth import login, logout
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer
-from .models import CustomUser
-from rest_framework.permissions import AllowAny
+from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer, TrainerSerializer
+from .models import CustomUser, Trainer
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -16,7 +16,7 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
             return Response({"success": True, "message": "User registered successfully"}, status=status.HTTP_201_CREATED)
         return Response({"success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -31,14 +31,26 @@ class LoginView(APIView):
             user = data["user"]
             tokens = data["tokens"]
 
+            user_data = {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                # "is_trainer": user.is_trainer,
+                "role":user.role
+            }
+
+            # Include trainer details if the user is a trainer
+            if user.is_trainer:
+                try:
+                    trainer_profile = Trainer.objects.get(user=user)
+                    user_data["trainer_profile"] = TrainerSerializer(trainer_profile).data
+                except Trainer.DoesNotExist:
+                    user_data["trainer_profile"] = None
+
             return Response({
                 "success": True,
                 "message": "Login successful",
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                },
+                "user": user_data,
                 "tokens": tokens
             }, status=status.HTTP_200_OK)
         
@@ -67,6 +79,7 @@ class ForgotPasswordView(APIView):
             return Response({"message": "Password reset email sent."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
 class LogoutView(APIView):
     permission_classes = [AllowAny]
 
@@ -81,3 +94,34 @@ class LogoutView(APIView):
         except Exception as e:
             return Response({"error": "Invalid or expired refresh token."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# Trainer Profile View
+class TrainerProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Retrieve the trainer profile of the logged-in user."""
+        if not request.user.is_trainer:
+            return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            trainer = Trainer.objects.get(user=request.user)
+            serializer = TrainerSerializer(trainer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Trainer.DoesNotExist:
+            return Response({"error": "Trainer profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request):
+        """Update trainer profile details."""
+        if not request.user.is_trainer:
+            return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            trainer = Trainer.objects.get(user=request.user)
+            serializer = TrainerSerializer(trainer, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Trainer.DoesNotExist:
+            return Response({"error": "Trainer profile not found."}, status=status.HTTP_404_NOT_FOUND)
