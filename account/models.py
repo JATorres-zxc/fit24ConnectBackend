@@ -47,6 +47,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     membership_start_date = models.DateField(null=True, blank=True)
     membership_end_date = models.DateField(null=True, blank=True)
     
+    height = models.FloatField(null=True, blank=True)
+    weight = models.FloatField(null=True, blank=True)
+    age = models.PositiveIntegerField(null=True, blank=True)
+    
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_trainer = models.BooleanField(default=False)
