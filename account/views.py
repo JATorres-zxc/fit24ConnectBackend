@@ -17,11 +17,6 @@ class RegisterView(APIView):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            
-            # If the user is a trainer, create a Trainer profile
-            if user.is_trainer:
-                Trainer.objects.create(user=user, experience="", contact_no="")
-            
             return Response({"success": True, "message": "User registered successfully"}, status=status.HTTP_201_CREATED)
         return Response({"success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 

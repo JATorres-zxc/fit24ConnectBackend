@@ -67,12 +67,7 @@ class LoginSerializer(serializers.Serializer):
         tokens = self.get_tokens_for_user(user)
 
         return {
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.full_name,
-                "role": user.role,
-            },
+            "user": user,  # Return the actual user instance, not a dictionary
             "tokens": tokens,
         }
 
