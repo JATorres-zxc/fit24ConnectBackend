@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'facility',
     'announcement',
     'mealPlan',
+    'profilee',
     'workout',
     
     'rest_framework',
