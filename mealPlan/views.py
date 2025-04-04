@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from .models import MealPlan, Meal, Feedback, Allergen
 from .serializers import MealPlanSerializer, MealSerializer, FeedbackSerializer, AllergenSerializer
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from account.serializers import UserSerializer
 
@@ -61,6 +62,18 @@ class MealViewSet(viewsets.ModelViewSet):
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = FeedbackSerializer
+
+    def perform_create(self, serializer):
+        mealplan_id = self.request.data.get('mealplan')
+
+        if not mealplan_id:
+            raise ValidationError({"error": "mealplan_id is required"})
+
+        # Check if mealplan exists
+        mealplan = get_object_or_404(MealPlan, pk=mealplan_id)
+
+        # Automatically associate the feedback with the mealplan
+        serializer.save(mealplan=mealplan)
 
 class AllergenViewSet(viewsets.ModelViewSet):
     queryset = Allergen.objects.all()

@@ -40,6 +40,11 @@ class MealSerializer(serializers.ModelSerializer):
 
         return instance
 
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+
 class MealPlanSerializer(serializers.ModelSerializer):
     meals = MealSerializer(many=True, required=False)
     requestee_id = serializers.PrimaryKeyRelatedField(
@@ -47,6 +52,8 @@ class MealPlanSerializer(serializers.ModelSerializer):
         source='requestee',
         required=False
     )
+    feedbacks = FeedbackSerializer(many=True, read_only=True) 
+    
     class Meta:
         model = MealPlan
         fields = '__all__'
@@ -85,7 +92,4 @@ class MealPlanSerializer(serializers.ModelSerializer):
                 Allergen.objects.create(meal=meal, **allergen)
 
         return instance
-class FeedbackSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Feedback
-        fields = '__all__'
+
