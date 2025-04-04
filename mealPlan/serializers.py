@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import MealPlan, Meal, Feedback, Allergen
+from account.models import CustomUser
 
 class AllergenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,8 +41,12 @@ class MealSerializer(serializers.ModelSerializer):
         return instance
 
 class MealPlanSerializer(serializers.ModelSerializer):
-    meals = MealSerializer(many=True)
-
+    meals = MealSerializer(many=True, required=False)
+    requestee_id = serializers.PrimaryKeyRelatedField(
+        queryset=CustomUser.objects.all(),
+        source='requestee',
+        required=False
+    )
     class Meta:
         model = MealPlan
         fields = '__all__'

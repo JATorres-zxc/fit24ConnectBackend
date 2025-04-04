@@ -1,9 +1,19 @@
 from django.db import models
+from django.conf import settings
 
 class MealPlan(models.Model):
     mealplan_id = models.AutoField(primary_key=True)
     member_id = models.IntegerField()
     trainer_id = models.IntegerField()
+    
+    requestee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='requested_mealplans',
+        null=True,
+        blank=True
+    )
+
     mealplan_name = models.CharField(max_length=255)
     fitness_goal = models.CharField(max_length=255)
     weight_goal = models.CharField(max_length=255, null=True)

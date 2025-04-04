@@ -5,6 +5,7 @@ from .models import MealPlan, Meal, Feedback, Allergen
 from .serializers import MealPlanSerializer, MealSerializer, FeedbackSerializer, AllergenSerializer
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from account.serializers import UserSerializer
 
 class MealPlanViewSet(viewsets.ModelViewSet):
     queryset = MealPlan.objects.all()
@@ -36,6 +37,10 @@ class MealPlanViewSet(viewsets.ModelViewSet):
             return Response({'status': 'meal plan updated'})
 
         return Response({'error': 'Invalid input'}, status=400)
+    
+    def perform_create(self, serializer):
+        # Set the logged-in user as the requestee
+        serializer.save(requestee=self.request.user)
 
 class MealViewSet(viewsets.ModelViewSet):
     queryset = Meal.objects.all()
