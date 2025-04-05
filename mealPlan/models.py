@@ -13,7 +13,13 @@ class MealPlan(models.Model):
         null=True,
         blank=True
     )
-
+    
+    STATUS_CHOICES = [
+        ('not_created', 'Not Created'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_created')
     mealplan_name = models.CharField(max_length=255)
     fitness_goal = models.CharField(max_length=255)
     weight_goal = models.CharField(max_length=255, null=True)
