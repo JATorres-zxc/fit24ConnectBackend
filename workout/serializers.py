@@ -15,6 +15,7 @@ class WorkoutExerciseSerializer(serializers.ModelSerializer):
 
 class WorkoutProgramSerializer(serializers.ModelSerializer):
     trainer_name = serializers.ReadOnlyField(source='trainer.full_name')
+    requestee_email = serializers.ReadOnlyField(source='requestee.email')
     workout_exercises = WorkoutExerciseSerializer(many=True, read_only=True)
 
     class Meta:

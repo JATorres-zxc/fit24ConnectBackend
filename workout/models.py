@@ -22,6 +22,13 @@ class WorkoutProgram(models.Model):
         null=True, blank=True, 
         limit_choices_to={'is_trainer': True}
     )
+    requestee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='requested_workout_programs',
+        help_text="User who requested this trainer-assigned program"
+    )
     fitness_goal = models.CharField(max_length=255)
     duration = models.PositiveIntegerField(help_text="Duration in days")
     intensity_level = models.CharField(max_length=100)

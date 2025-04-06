@@ -8,10 +8,27 @@ class WorkoutProgramListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
-        if self.request.user.is_authenticated and self.request.user.is_trainer:
-            serializer.save(trainer=self.request.user)
-        else:
-            serializer.save(trainer=None)
+        trainer = self.request.user if self.request.user.is_authenticated and self.request.user.is_trainer else None
+        requestee_id = self.request.data.get("requestee")  # expects `requestee` in payload
+
+        requestee = None
+        if requestee_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                requestee = User.objects.get(id=requestee_id)
+            except User.DoesNotExist:
+                pass
+            
+        serializer.save(trainer=trainer, requestee=requestee)
+    
+    # trainers to list workouts they've made for a specific user
+    def get_queryset(self):
+        queryset = WorkoutProgram.objects.all()
+        requestee_id = self.request.query_params.get('requestee')
+        if requestee_id:
+            queryset = queryset.filter(requestee_id=requestee_id)
+        return queryset
 
 class WorkoutProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = WorkoutProgram.objects.all()
