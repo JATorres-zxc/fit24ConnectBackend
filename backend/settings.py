@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'mealPlan',
     'profilee',
     'workout',
+    'reports',
     
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
