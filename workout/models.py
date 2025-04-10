@@ -10,16 +10,19 @@ class Exercise(models.Model):
         return self.name
 
 class WorkoutProgram(models.Model):
-    TRAINING_TYPES = [
-        ('free', 'Free Workout'),
-        ('trainer_assigned', 'Trainer Assigned'),
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('created', 'Created'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
     ]
 
     program_name = models.CharField(max_length=255)
     trainer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        null=True, blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True, blank=True,
         limit_choices_to={'is_trainer': True}
     )
     requestee = models.ForeignKey(
@@ -32,7 +35,7 @@ class WorkoutProgram(models.Model):
     fitness_goal = models.CharField(max_length=255)
     duration = models.PositiveIntegerField(help_text="Duration in days")
     intensity_level = models.CharField(max_length=100)
-    program_type = models.CharField(max_length=20, choices=TRAINING_TYPES, default='free')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     def __str__(self):
         return self.program_name

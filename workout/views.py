@@ -19,15 +19,20 @@ class WorkoutProgramListCreateView(generics.ListCreateAPIView):
                 requestee = User.objects.get(id=requestee_id)
             except User.DoesNotExist:
                 pass
-            
+
         serializer.save(trainer=trainer, requestee=requestee)
-    
+
     # trainers to list workouts they've made for a specific user
     def get_queryset(self):
         queryset = WorkoutProgram.objects.all()
         requestee_id = self.request.query_params.get('requestee')
+        status = self.request.query_params.get('status')
+
         if requestee_id:
             queryset = queryset.filter(requestee_id=requestee_id)
+        if status:
+            queryset = queryset.filter(status=status)
+
         return queryset
 
 class WorkoutProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
