@@ -166,7 +166,7 @@ class MemberListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         if not (user.is_admin or user.is_trainer):
-            raise PermissionDenied("Only admins can access this data.")
+            raise PermissionDenied("Only admins and trainer can access this data.")
         return super().get_queryset()
 
 # GET /members/
