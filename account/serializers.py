@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
+# --- REGISTRATION ---
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
@@ -19,10 +20,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        
         if User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError({"email": "A user with this email already exists."})
-
         return data
 
     def create(self, validated_data):
@@ -33,26 +32,33 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 password=validated_data['password'],
                 is_trainer=is_trainer
             )
-            # If user is a trainer, create a trainer profile
             if is_trainer:
                 Trainer.objects.create(user=user, experience="", contact_no="")
-
         return user
 
+# --- SIMPLIFIED USER SERIALIZER FOR USE INSIDE TRAINER ---
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'full_name']
+
+# --- TRAINER SERIALIZER ---
 class TrainerSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_trainer=True))
+    user = SimpleUserSerializer(read_only=True)  # avoids circular reference
 
     class Meta:
         model = Trainer
-        fields = '__all__'
+        fields = ['id', 'user', 'experience', 'contact_no']
 
+# --- FULL USER SERIALIZER WITH TRAINER PROFILE INCLUDED ---
 class UserSerializer(serializers.ModelSerializer):
-    trainer_profile = TrainerSerializer(read_only=True)  # Include trainer details if applicable
+    trainer_profile = TrainerSerializer(read_only=True)
 
     class Meta:
         model = User
         fields = ["id", "email", "full_name", "is_trainer", "trainer_profile"]
 
+# --- LOGIN SERIALIZER ---
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -67,19 +73,18 @@ class LoginSerializer(serializers.Serializer):
         tokens = self.get_tokens_for_user(user)
 
         return {
-            "user": user,  # Return the actual user instance, not a dictionary
+            "user": user,
             "tokens": tokens,
         }
 
     def get_tokens_for_user(self, user):
-        """Generate and return refresh and access tokens for the user"""
         refresh = RefreshToken.for_user(user)
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }
 
-
+# --- FORGOT PASSWORD SERIALIZER ---
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -88,4 +93,3 @@ class ForgotPasswordSerializer(serializers.Serializer):
         if not User.objects.filter(email=email).exists():
             raise serializers.ValidationError({"email": "No account found with this email address."})
         return data
-

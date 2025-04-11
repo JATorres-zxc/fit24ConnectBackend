@@ -137,17 +137,26 @@ class TrainerListView(ListAPIView):
 # [
 #   {
 #     "id": 1,
-#     "user": 2,
+#     "user": {
+#       "id": 2,
+#       "email": "trainer1@example.com",
+#       "full_name": "Trainer One"
+#     },
 #     "experience": "5 years of strength training",
 #     "contact_no": "1234567890"
 #   },
 #   {
 #     "id": 2,
-#     "user": 4,
+#     "user": {
+#       "id": 4,
+#       "email": "trainer2@example.com",
+#       "full_name": "Trainer Two"
+#     },
 #     "experience": "Certified nutritionist",
 #     "contact_no": "0987654321"
 #   }
 # ]
+
 
 class MemberListView(ListAPIView):
     queryset = CustomUser.objects.filter(is_trainer=False, is_admin=False)
