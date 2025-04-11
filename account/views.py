@@ -9,7 +9,7 @@ from .models import CustomUser, Trainer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework.generics import ListAPIView
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     
@@ -125,3 +125,24 @@ class TrainerProfileView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Trainer.DoesNotExist:
             return Response({"error": "Trainer profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class TrainerListView(ListAPIView):
+    queryset = Trainer.objects.select_related('user').filter(user__is_trainer=True)
+    serializer_class = TrainerSerializer
+    permission_classes = [IsAuthenticated]
+
+# GET /trainers/
+# [
+#   {
+#     "id": 1,
+#     "user": 2,
+#     "experience": "5 years of strength training",
+#     "contact_no": "1234567890"
+#   },
+#   {
+#     "id": 2,
+#     "user": 4,
+#     "experience": "Certified nutritionist",
+#     "contact_no": "0987654321"
+#   }
+# ]
