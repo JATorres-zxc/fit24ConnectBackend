@@ -10,9 +10,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.generics import ListAPIView
+from .serializers import UserSerializer
+from rest_framework.exceptions import PermissionDenied
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
-    
+
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -78,7 +81,6 @@ class ForgotPasswordView(APIView):
             )
             return Response({"message": "Password reset email sent."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 class LogoutView(APIView):
     permission_classes = [AllowAny]
@@ -144,5 +146,33 @@ class TrainerListView(ListAPIView):
 #     "user": 4,
 #     "experience": "Certified nutritionist",
 #     "contact_no": "0987654321"
+#   }
+# ]
+
+class MemberListView(ListAPIView):
+    queryset = CustomUser.objects.filter(is_trainer=False, is_admin=False)
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if not self.request.user.is_admin:
+            raise PermissionDenied("Only admins can access this data.")
+        return super().get_queryset()
+
+# GET /members/
+# [
+#   {
+#     "id": 5,
+#     "email": "jane@example.com",
+#     "full_name": "Jane Doe",
+#     "is_trainer": false,
+#     "trainer_profile": null
+#   },
+#   {
+#     "id": 7,
+#     "email": "mark@example.com",
+#     "full_name": "Mark Smith",
+#     "is_trainer": false,
+#     "trainer_profile": null
 #   }
 # ]

@@ -12,4 +12,5 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('trainers/', TrainerListView.as_view(), name='trainer-list'),
+    path('members/', MemberListView.as_view(), name='member-list'),
 ]
