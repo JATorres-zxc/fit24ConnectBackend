@@ -8,7 +8,6 @@ from facility.models import Facility, AccessLog
 from rest_framework import generics, permissions
 from .models import Report
 from .serializers import ReportSerializer
-from .permissions import IsAdminUser
 
 # class GenerateFacilityPDFReport(APIView):
 #     permission_classes = [IsAuthenticated, IsAdminUser]
