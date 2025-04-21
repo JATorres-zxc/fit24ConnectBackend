@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        h2 { color: #2e6c80; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #888; padding: 8px; font-size: 12px; }
+        th { background-color: #eee; }
+    </style>
+</head>
+<body>
+    <h1>Facility Access Report</h1>
+    {% for entry in data %}
+        <h2>{{ entry.facility.name }} (Tier: {{ entry.facility.required_tier }})</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>User Info</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in entry.logs %}
+                    <tr>
+                        <td>
+                            <strong>Name:</strong> {{ log.user.full_name }}<br>
+                            <strong>Email:</strong> {{ log.user.email }}<br>
+                        </td>
+                        <td>{{ log.timestamp }}</td>
+                        <td>{{ log.status }}</td>
+                        <td>{{ log.reason|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">No access logs.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+</body>
+</html>
