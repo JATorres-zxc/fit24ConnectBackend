@@ -52,8 +52,8 @@ class MealPlanSerializer(serializers.ModelSerializer):
         source='requestee',
         required=False
     )
-    feedbacks = FeedbackSerializer(many=True, read_only=True) 
-    
+    feedbacks = FeedbackSerializer(many=True, read_only=True)
+
     class Meta:
         model = MealPlan
         fields = '__all__'
@@ -84,8 +84,10 @@ class MealPlanSerializer(serializers.ModelSerializer):
         instance.save()
 
         instance.meals.all().delete()
+
         for meal_data in meals_data:
             allergens_data = meal_data.pop('allergens', [])
+            meal_data.pop('mealplan', None)  # REMOVE mealplan if it exists
             meal = Meal.objects.create(mealplan=instance, **meal_data)
 
             for allergen in allergens_data:
