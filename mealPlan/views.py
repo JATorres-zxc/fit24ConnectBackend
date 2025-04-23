@@ -18,6 +18,10 @@ class MealPlanViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
         requested_status = data.get('status')
 
+        # Prevent members from setting status to completed
+        if requested_status == 'completed' and not getattr(request.user, 'is_trainer', False):
+            return Response({'error': 'Only trainers can publish (complete) the meal plan.'}, status=403)
+
         # Enforce who can update the status
         if instance.plan_type == 'personal' and requested_status:
             if instance.status == 'not_created' and requested_status == 'in_progress':
@@ -28,6 +32,13 @@ class MealPlanViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Only trainers can mark the plan as completed.'}, status=403)
             elif requested_status != instance.status:
                 return Response({'error': 'Invalid status transition.'}, status=400)
+
+        # If user is not a trainer and is not just changing the status to 'in_progress', block changes
+        if instance.plan_type == 'personal' and not getattr(request.user, 'is_trainer', False):
+            # Allow only changing the status to 'in_progress'
+            allowed_fields = {'status'}
+            if not set(data.keys()).issubset(allowed_fields):
+                return Response({'error': 'You can only mark the meal plan as in progress. Other edits require a trainer.'}, status=403)
 
         return super().update(request, *args, **kwargs)
 
@@ -56,7 +67,10 @@ class MealPlanViewSet(viewsets.ModelViewSet):
         if not meals_data:
             return Response({'error': 'Invalid input'}, status=400)
 
-        if mealplan.plan_type == 'personal' and getattr(request.user, 'is_trainer', False):
+        # Only trainers can complete meal plans
+        if mealplan.plan_type == 'personal':
+            if not getattr(request.user, 'is_trainer', False):
+                return Response({'error': 'Only trainers can publish the meal plan.'}, status=403)
             mealplan.status = 'completed'
             mealplan.save()
 
