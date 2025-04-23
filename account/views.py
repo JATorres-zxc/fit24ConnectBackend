@@ -12,6 +12,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.generics import ListAPIView
 from .serializers import UserSerializer
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAdminUser
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -186,3 +188,35 @@ class MemberListView(ListAPIView):
 #     "trainer_profile": null
 #   }
 # ]
+
+class TrainerStatusUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, user_id, action):
+        try:
+            user = CustomUser.objects.get(pk=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if action == "promote":
+            if user.is_trainer:
+                return Response({"message": "User is already a trainer."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.is_trainer = True
+            user.save()
+            Trainer.objects.create(user=user, experience="", contact_no="")
+            return Response({"message": "User has been promoted to trainer."}, status=status.HTTP_200_OK)
+
+        elif action == "demote":
+            if not user.is_trainer:
+                return Response({"message": "User is not a trainer."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.is_trainer = False
+            user.save()
+            Trainer.objects.filter(user=user).delete()
+            return Response({"message": "Trainer has been demoted to user."}, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
+# POST /trainer-status/3/promote/
+# POST /trainer-status/5/demote/
