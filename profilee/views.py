@@ -20,5 +20,8 @@ class ProfileDetailView(APIView):
 
     def get(self, request):
         user = request.user
+
+        print(f"[DEBUG] Accessed by: {user.email} | Role: {user.role}")
+
         serializer = ProfileSerializer(user)
         return Response(serializer.data)

@@ -6,5 +6,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = [
             'full_name', 'contact_number', 'messenger_account', 'complete_address',
-            'nationality', 'birthdate', 'gender'
+            'nationality', 'birthdate', 'gender',
+            'height', 'weight', 'age'
         ]
