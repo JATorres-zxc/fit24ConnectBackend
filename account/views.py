@@ -108,6 +108,8 @@ class TrainerProfileView(APIView):
         if not request.user.is_trainer:
             return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Ensure Trainer profile exists if user is a trainer
+        request.user.ensure_trainer_profile
         try:
             trainer = Trainer.objects.get(user=request.user)
             serializer = TrainerSerializer(trainer)
@@ -120,6 +122,8 @@ class TrainerProfileView(APIView):
         if not request.user.is_trainer:
             return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Ensure Trainer profile exists if user is a trainer
+        request.user.ensure_trainer_profile
         try:
             trainer = Trainer.objects.get(user=request.user)
             serializer = TrainerSerializer(trainer, data=request.data, partial=True)

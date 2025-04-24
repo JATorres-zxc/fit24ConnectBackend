@@ -26,14 +26,16 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         is_trainer = validated_data.pop('is_trainer', False)
-        with transaction.atomic():
-            user = User.objects.create_user(
-                email=validated_data['email'],
-                password=validated_data['password'],
-                is_trainer=is_trainer
-            )
-            if is_trainer:
-                Trainer.objects.create(user=user, experience="", contact_no="")
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=validated_data['password'],
+            is_trainer=is_trainer
+        )
+
+        # Create Trainer profile if user is a trainer
+        if is_trainer:
+            Trainer.objects.create(user=user, experience="", contact_no="")
+
         return user
 
 # --- SIMPLIFIED USER SERIALIZER FOR USE INSIDE TRAINER ---
