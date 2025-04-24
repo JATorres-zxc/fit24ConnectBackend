@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from account.serializers import UserSerializer
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 class MealPlanViewSet(viewsets.ModelViewSet):
     queryset = MealPlan.objects.all()
@@ -80,13 +81,57 @@ class MealPlanViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """
         Create a new meal plan. Set requestee to the current user.
-        Only staff users can create general meal plans.
+        Only trainers users can create general meal plans.
         """
         plan_type = self.request.data.get('plan_type', 'personal')
-        if plan_type == 'general' and not self.request.user.is_staff:
-            raise PermissionDenied("Only admins can create general meal plans.")
+
+        if plan_type == 'general':
+            if not self.request.user.is_trainer:
+                raise PermissionDenied("Only trainer can create general meal plans.")
+        elif plan_type == 'personal':
+            raise PermissionDenied("Use the request_plan endpoint to request a personal meal plan.")
 
         serializer.save(requestee=self.request.user)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def request_plan(self, request):
+        """
+        Allows a member to request a personal meal plan.
+        Requires a trainer_id to be specified.
+        """
+        if getattr(request.user, 'is_trainer', False):
+            return Response({'error': 'Trainers cannot request meal plans.'}, status=403)
+
+        trainer_id = request.data.get('trainer_id')
+        if not trainer_id:
+            raise ValidationError({'trainer_id': 'This field is required.'})
+
+        # Optional: validate if trainer_id exists and is actually a trainer
+        from account.models import CustomUser
+        try:
+            trainer = CustomUser.objects.get(id=trainer_id, is_trainer=True)
+        except CustomUser.DoesNotExist:
+            raise ValidationError({'trainer_id': 'Invalid trainer ID or user is not a trainer.'})
+
+        # Create the empty MealPlan with status 'in_progress'
+        meal_plan = MealPlan.objects.create(
+            requestee=request.user,
+            member_id=request.user.id,
+            trainer_id=trainer_id,
+            plan_type='personal',
+            status='in_progress',
+            mealplan_name='',
+            fitness_goal='',
+            weight_goal='',
+            calorie_intake=0,
+            protein=0,
+            carbs=0,
+            instructions=''
+        )
+
+        serializer = MealPlanSerializer(meal_plan)
+        return Response(serializer.data, status=201)
+
 class MealViewSet(viewsets.ModelViewSet):
     queryset = Meal.objects.all()
     serializer_class = MealSerializer
