@@ -7,10 +7,41 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from account.serializers import UserSerializer
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 class MealPlanViewSet(viewsets.ModelViewSet):
     queryset = MealPlan.objects.all()
     serializer_class = MealPlanSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = request.data.copy()
+        requested_status = data.get('status')
+
+        # Prevent members from setting status to completed
+        if requested_status == 'completed' and not getattr(request.user, 'is_trainer', False):
+            return Response({'error': 'Only trainers can publish (complete) the meal plan.'}, status=403)
+
+        # Enforce who can update the status
+        if instance.plan_type == 'personal' and requested_status:
+            if instance.status == 'not_created' and requested_status == 'in_progress':
+                if request.user != instance.requestee:
+                    return Response({'error': 'Only the requestee can mark the plan as in progress.'}, status=403)
+            elif instance.status == 'in_progress' and requested_status == 'completed':
+                if not getattr(request.user, 'is_trainer', False):
+                    return Response({'error': 'Only trainers can mark the plan as completed.'}, status=403)
+            elif requested_status != instance.status:
+                return Response({'error': 'Invalid status transition.'}, status=400)
+
+        # If user is not a trainer and is not just changing the status to 'in_progress', block changes
+        if instance.plan_type == 'personal' and not getattr(request.user, 'is_trainer', False):
+            # Allow only changing the status to 'in_progress'
+            allowed_fields = {'status'}
+            if not set(data.keys()).issubset(allowed_fields):
+                return Response({'error': 'You can only mark the meal plan as in progress. Other edits require a trainer.'}, status=403)
+
+        return super().update(request, *args, **kwargs)
 
     @action(detail=True, methods=['patch'])
     def adjust_macros(self, request, pk=None):
@@ -29,19 +60,77 @@ class MealPlanViewSet(viewsets.ModelViewSet):
     def update_meal_plan(self, request, pk=None):
         """
         Updates the entire meal plan including all meals.
+        Automatically sets status to 'completed' if user is a trainer.
         """
         mealplan = self.get_object()
         meals_data = request.data.get('meals', [])
 
-        if meals_data:
-            mealplan.updatePlan(meals_data)
-            return Response({'status': 'meal plan updated'})
+        if not meals_data:
+            return Response({'error': 'Invalid input'}, status=400)
 
-        return Response({'error': 'Invalid input'}, status=400)
-    
+        # Only trainers can complete meal plans
+        if mealplan.plan_type == 'personal':
+            if not getattr(request.user, 'is_trainer', False):
+                return Response({'error': 'Only trainers can publish the meal plan.'}, status=403)
+            mealplan.status = 'completed'
+            mealplan.save()
+
+        mealplan.updatePlan(meals_data)
+        return Response({'status': 'meal plan updated'})
+
     def perform_create(self, serializer):
-        # Set the logged-in user as the requestee
+        """
+        Create a new meal plan. Set requestee to the current user.
+        Only trainers users can create general meal plans.
+        """
+        plan_type = self.request.data.get('plan_type', 'personal')
+
+        if plan_type == 'general':
+            if not self.request.user.is_trainer:
+                raise PermissionDenied("Only trainer can create general meal plans.")
+        elif plan_type == 'personal':
+            raise PermissionDenied("Use the request_plan endpoint to request a personal meal plan.")
+
         serializer.save(requestee=self.request.user)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def request_plan(self, request):
+        """
+        Allows a member to request a personal meal plan.
+        Requires a trainer_id to be specified.
+        """
+        if getattr(request.user, 'is_trainer', False):
+            return Response({'error': 'Trainers cannot request meal plans.'}, status=403)
+
+        trainer_id = request.data.get('trainer_id')
+        if not trainer_id:
+            raise ValidationError({'trainer_id': 'This field is required.'})
+
+        # Optional: validate if trainer_id exists and is actually a trainer
+        from account.models import CustomUser
+        try:
+            trainer = CustomUser.objects.get(id=trainer_id, is_trainer=True)
+        except CustomUser.DoesNotExist:
+            raise ValidationError({'trainer_id': 'Invalid trainer ID or user is not a trainer.'})
+
+        # Create the empty MealPlan with status 'in_progress'
+        meal_plan = MealPlan.objects.create(
+            requestee=request.user,
+            member_id=request.user.id,
+            trainer_id=trainer_id,
+            plan_type='personal',
+            status='in_progress',
+            mealplan_name='',
+            fitness_goal='',
+            weight_goal='',
+            calorie_intake=0,
+            protein=0,
+            carbs=0,
+            instructions=''
+        )
+
+        serializer = MealPlanSerializer(meal_plan)
+        return Response(serializer.data, status=201)
 
 class MealViewSet(viewsets.ModelViewSet):
     queryset = Meal.objects.all()
@@ -50,7 +139,7 @@ class MealViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         mealplan_id = self.request.data.get('mealplan')
         
-        if not mealplan_id:  
+        if not mealplan_id:
             return Response({"error": "mealplan_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Check if mealplan exists

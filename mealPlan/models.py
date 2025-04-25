@@ -5,7 +5,7 @@ class MealPlan(models.Model):
     mealplan_id = models.AutoField(primary_key=True)
     member_id = models.IntegerField()
     trainer_id = models.IntegerField()
-    
+
     requestee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -13,12 +13,19 @@ class MealPlan(models.Model):
         null=True,
         blank=True
     )
-    
+
     STATUS_CHOICES = [
         ('not_created', 'Not Created'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
+
+    PLAN_TYPE_CHOICES = [
+        ('personal', 'Personal'),
+        ('general', 'General'),
+    ]
+    plan_type = models.CharField(max_length=10, choices=PLAN_TYPE_CHOICES, default='personal')
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_created')
     mealplan_name = models.CharField(max_length=255)
     fitness_goal = models.CharField(max_length=255)
