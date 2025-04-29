@@ -185,7 +185,7 @@ class MealPlanViewSet(viewsets.ModelViewSet):
             trainer_id=trainer_id,
             plan_type='personal',
             status='not_created',  # Changed from 'in_progress' to 'not_created'
-            mealplan_name=f"Meal Plan for {request.user.username}",
+            mealplan_name='',
             fitness_goal=request.data.get('fitness_goal', ''),
             weight_goal=request.data.get('weight_goal', ''),
             calorie_intake=request.data.get('calorie_intake', 0),
