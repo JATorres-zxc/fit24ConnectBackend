@@ -116,3 +116,17 @@ class MealPlanSerializer(serializers.ModelSerializer):
 
         return instance
 
+    def validate(self, data):
+        # Check for allergen conflicts when creating/updating meal plans
+        if 'meals' in data and 'user_allergies' in data:
+            user_allergies = set(a.strip().lower() for a in data['user_allergies'].split(','))
+
+            for meal_data in data['meals']:
+                if 'allergens' in meal_data:
+                    for allergen_data in meal_data['allergens']:
+                        if allergen_data['allergen_name'].strip().lower() in user_allergies:
+                            raise serializers.ValidationError(
+                                f"Meal contains allergen '{allergen_data['allergen_name']}' that conflicts with user's allergies"
+                            )
+        return data
+
