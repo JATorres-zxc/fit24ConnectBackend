@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from account.serializers import UserSerializer
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
-from account.models import CustomUser
 
 class MealPlanViewSet(viewsets.ModelViewSet):
     queryset = MealPlan.objects.all()
@@ -168,11 +167,6 @@ class MealPlanViewSet(viewsets.ModelViewSet):
         if not trainer_id:
             raise ValidationError({'trainer_id': 'This field is required.'})
 
-        # Optional: validate if trainer_id exists and is actually a trainer
-        try:
-            trainer = CustomUser.objects.get(id=trainer_id, is_trainer=True)
-        except CustomUser.DoesNotExist:
-            raise ValidationError({'trainer_id': 'Invalid trainer ID or user is not a trainer.'})
 
         # Check if the user already has a pending personal meal plan
         existing = MealPlan.objects.filter(
