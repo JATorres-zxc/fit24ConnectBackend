@@ -113,6 +113,16 @@ class MealPlanViewSet(viewsets.ModelViewSet):
         except CustomUser.DoesNotExist:
             raise ValidationError({'trainer_id': 'Invalid trainer ID or user is not a trainer.'})
 
+        # Check if the user already has a pending personal meal plan
+        existing = MealPlan.objects.filter(
+            requestee=request.user,
+            plan_type='personal',
+            status__in=['in_progress', 'not_created']
+        ).exists()
+
+        if existing:
+            return Response({'error': 'You already have a pending personal meal plan.'}, status=400)
+
         # Create the empty MealPlan with status 'in_progress'
         meal_plan = MealPlan.objects.create(
             requestee=request.user,
