@@ -75,6 +75,25 @@ class MealPlanViewSet(viewsets.ModelViewSet):
             mealplan.status = 'completed'
             mealplan.save()
 
+        # Get the user's declared allergens
+        user_allergens = Allergen.objects.filter(name__in=request.user.user_allergies.split(','))
+
+        # Filter meals based on allergens
+        incompatible_meals = []
+        for meal_data in meals_data:
+            meal_id = meal_data.get('meal_id')
+            meal = get_object_or_404(Meal, id=meal_id)
+
+            # Check if any allergens in the meal are in the user's declared allergens
+            meal_allergens = meal.allergens.all()
+            if meal_allergens.filter(id__in=user_allergens.values_list('id', flat=True)).exists():
+                incompatible_meals.append(meal.id)
+
+        if incompatible_meals:
+            return Response(
+                {'error': f'Meals with the following IDs contain allergens: {incompatible_meals}'}, status=400
+            )
+
         mealplan.updatePlan(meals_data)
         return Response({'status': 'meal plan updated'})
 
@@ -123,7 +142,7 @@ class MealPlanViewSet(viewsets.ModelViewSet):
         if existing:
             return Response({'error': 'You already have a pending personal meal plan.'}, status=400)
 
-        # Create the empty MealPlan with status 'in_progress'
+        # Create the meal plan and filter based on allergens
         meal_plan = MealPlan.objects.create(
             requestee=request.user,
             member_id=request.user.id,

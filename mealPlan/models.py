@@ -34,6 +34,7 @@ class MealPlan(models.Model):
     protein = models.IntegerField()
     carbs = models.IntegerField()
     instructions = models.TextField()
+    user_allergies = models.TextField(blank=True, null=True, help_text="User-declared allergies")
 
     def updatePlan(self, meals_data):
         """Updates all meals in the meal plan."""
@@ -65,6 +66,7 @@ class Meal(models.Model):
     calories = models.IntegerField()
     protein = models.IntegerField()
     carbs = models.IntegerField()
+    allergens = models.ManyToManyField('Allergen', related_name='meals', blank=True)
 
 class Feedback(models.Model):
     mealplan = models.ForeignKey(MealPlan, related_name="feedbacks", on_delete=models.CASCADE)
@@ -72,5 +74,4 @@ class Feedback(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Allergen(models.Model):
-    meal = models.ForeignKey(Meal, related_name="allergens", on_delete=models.CASCADE, null=True) # migration issue
     allergen_name = models.CharField(max_length=255)

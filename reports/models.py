@@ -11,7 +11,7 @@ class Report(models.Model):
         ('user', 'User'),
         ('trainer', 'Trainer'),
         ('general', 'General')
-    ]) # to be discussed
+    ], default='default_type') # to be discussed
 
     def __str__(self):
         return self.title
