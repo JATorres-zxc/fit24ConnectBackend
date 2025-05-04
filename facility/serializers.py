@@ -8,7 +8,15 @@ class QRScanSerializer(serializers.Serializer):
 class AccessLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
     facility_name = serializers.CharField(source='facility.name', read_only=True)
+    facility_required_tier = serializers.CharField(source='facility.required_tier', read_only=True)
 
     class Meta:
         model = AccessLog
-        fields = ['user_name', 'facility_name', 'timestamp', 'status', 'reason']
+        fields = [
+            'user_name', 
+            'facility_name',
+            'facility_required_tier',
+            'timestamp', 
+            'status', 
+            'reason'
+        ]

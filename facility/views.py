@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics
 from .models import Facility, AccessLog
 from .serializers import QRScanSerializer, AccessLogSerializer
 from datetime import date
@@ -49,3 +50,11 @@ class QRScanView(APIView):
             'facility_name': facility.name,
             'timestamp': now()
         })
+
+class UserAccessLogsView(generics.ListAPIView):
+    serializer_class = AccessLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Return only the current user's access logs
+        return AccessLog.objects.filter(user=self.request.user).order_by('-timestamp')
