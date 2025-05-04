@@ -95,3 +95,13 @@ class ForgotPasswordSerializer(serializers.Serializer):
         if not User.objects.filter(email=email).exists():
             raise serializers.ValidationError({"email": "No account found with this email address."})
         return data
+
+class MembershipTypeUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['type_of_membership']
+    
+    def validate_type_of_membership(self, value):
+        if value not in ['tier1', 'tier2', 'tier3']:
+            raise serializers.ValidationError("Invalid membership type. Must be tier1, tier2, or tier3")
+        return value

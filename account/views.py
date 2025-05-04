@@ -4,9 +4,11 @@ from rest_framework import status, serializers
 from django.contrib.auth import login, logout
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer, TrainerSerializer
+from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer, TrainerSerializer, MembershipTypeUpdateSerializer
 from .models import CustomUser, Trainer
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework import permissions
+from rest_framework import generics
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.generics import ListAPIView
@@ -236,3 +238,20 @@ class TrainerStatusUpdateView(APIView):
             return Response({"detail": "Invalid action. Use 'assign' or 'remove'."}, status=400)
 # POST /api/account/trainer-status/5/assign/
 # Authorization: Bearer <admin_token>
+
+class AdminUpdateMembershipTypeView(generics.UpdateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = MembershipTypeUpdateSerializer
+    permission_classes = [permissions.IsAdminUser]
+    http_method_names = ['patch']  # Only allow PATCH requests
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        
+        # Just update the membership type
+        instance.type_of_membership = serializer.validated_data['type_of_membership']
+        instance.save()
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
