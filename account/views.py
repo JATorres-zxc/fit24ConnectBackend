@@ -194,33 +194,45 @@ class MemberListView(ListAPIView):
 # ]
 
 class TrainerStatusUpdateView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, user_id, action):
+        admin_user = request.user
+
+        if not admin_user.is_admin:
+            return Response({"detail": "You do not have permission to perform this action."}, status=403)
+
         try:
-            user = CustomUser.objects.get(pk=user_id)
+            target_user = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "User not found."}, status=404)
 
-        if action == "promote":
-            if user.is_trainer:
-                return Response({"message": "User is already a trainer."}, status=status.HTTP_400_BAD_REQUEST)
+        if action == "assign":
+            if target_user.is_trainer:
+                return Response({"detail": "User is already a trainer."}, status=400)
 
-            user.is_trainer = True
-            user.save()
-            Trainer.objects.create(user=user, experience="", contact_no="")
-            return Response({"message": "User has been promoted to trainer."}, status=status.HTTP_200_OK)
+            target_user.is_trainer = True
+            target_user.save()
 
-        elif action == "demote":
-            if not user.is_trainer:
-                return Response({"message": "User is not a trainer."}, status=status.HTTP_400_BAD_REQUEST)
+            if not hasattr(target_user, 'trainer_profile'):
+                Trainer.objects.create(user=target_user, experience="", contact_no="")
 
-            user.is_trainer = False
-            user.save()
-            Trainer.objects.filter(user=user).delete()
-            return Response({"message": "Trainer has been demoted to user."}, status=status.HTTP_200_OK)
+            return Response({"detail": "Trainer role assigned."}, status=200)
 
-        return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+        elif action == "remove":
+            if not target_user.is_trainer:
+                return Response({"detail": "User is not a trainer."}, status=400)
 
-# POST /trainer-status/3/promote/
-# POST /trainer-status/5/demote/
+            target_user.is_trainer = False
+            target_user.save()
+
+            # Optionally, delete the trainer profile
+            if hasattr(target_user, 'trainer_profile'):
+                target_user.trainer_profile.delete()
+
+            return Response({"detail": "Trainer role removed."}, status=200)
+
+        else:
+            return Response({"detail": "Invalid action. Use 'assign' or 'remove'."}, status=400)
+# POST /api/account/trainer-status/5/assign/
+# Authorization: Bearer <admin_token>
