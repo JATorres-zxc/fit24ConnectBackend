@@ -21,3 +21,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         if obj.is_trainer and hasattr(obj, 'trainer_profile'):
             return obj.trainer_profile.experience
         return None
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
