@@ -105,3 +105,8 @@ class MembershipTypeUpdateSerializer(serializers.ModelSerializer):
         if value not in ['tier1', 'tier2', 'tier3']:
             raise serializers.ValidationError("Invalid membership type. Must be tier1, tier2, or tier3")
         return value
+
+class MembershipStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['is_active']

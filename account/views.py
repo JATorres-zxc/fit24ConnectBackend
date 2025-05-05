@@ -4,7 +4,7 @@ from rest_framework import status, serializers
 from django.contrib.auth import login, logout
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer, TrainerSerializer, MembershipTypeUpdateSerializer
+from .serializers import *
 from .models import CustomUser, Trainer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import permissions
@@ -255,3 +255,22 @@ class AdminUpdateMembershipTypeView(generics.UpdateAPIView):
         instance.save()
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MembershipStatusUpdateView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, user_id):
+        try:
+            member = CustomUser.objects.get(id=user_id, is_trainer=False, is_admin=False)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Member not found."}, status=404)
+
+        serializer = MembershipStatusUpdateSerializer(member, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": f"Membership status updated to {'active' if serializer.data['is_active'] else 'inactive'}.",
+                "data": serializer.data
+            })
+        return Response(serializer.errors, status=400)
