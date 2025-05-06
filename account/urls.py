@@ -13,4 +13,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('trainers/', TrainerListView.as_view(), name='trainer-list'),
     path('members/', MemberListView.as_view(), name='member-list'),
+    path('trainer-status/<int:user_id>/<str:action>/', TrainerStatusUpdateView.as_view(), name='trainer-status-update'),
+    path('admin/update-membership-type/<int:pk>/', AdminUpdateMembershipTypeView.as_view(), name='admin-update-membership-type'),
+    path('admin/members/<int:user_id>/status/', MembershipStatusUpdateView.as_view(), name='membership-status-update'),
 ]

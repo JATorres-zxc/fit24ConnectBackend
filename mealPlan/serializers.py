@@ -60,6 +60,14 @@ class MealPlanSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         meals_data = validated_data.pop('meals', [])
+
+        # Determine initial status based on plan type
+        plan_type = validated_data.get('plan_type', 'personal')
+        if plan_type == 'general':
+            validated_data['status'] = 'completed'
+        else:
+            validated_data['status'] = 'not_created'
+
         meal_plan = MealPlan.objects.create(**validated_data)
 
         for meal_data in meals_data:
@@ -74,6 +82,21 @@ class MealPlanSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         meals_data = validated_data.pop('meals', [])
 
+        # Status management logic
+        requested_status = validated_data.get('status', instance.status)
+        plan_type = instance.plan_type
+
+        if plan_type == 'personal':
+            if instance.status == 'not_created' and requested_status == 'in_progress':
+                instance.status = 'in_progress'
+            elif instance.status == 'in_progress' and requested_status == 'completed':
+                instance.status = 'completed'
+            elif requested_status != instance.status:
+                raise serializers.ValidationError("Invalid status transition for personal meal plan.")
+        elif plan_type == 'general':
+            instance.status = 'completed'  # always
+
+        # Standard field updates
         instance.mealplan_name = validated_data.get('mealplan_name', instance.mealplan_name)
         instance.fitness_goal = validated_data.get('fitness_goal', instance.fitness_goal)
         instance.weight_goal = validated_data.get('weight_goal', instance.weight_goal)
@@ -83,13 +106,27 @@ class MealPlanSerializer(serializers.ModelSerializer):
         instance.instructions = validated_data.get('instructions', instance.instructions)
         instance.save()
 
+        # Meals update
         instance.meals.all().delete()
         for meal_data in meals_data:
             allergens_data = meal_data.pop('allergens', [])
             meal = Meal.objects.create(mealplan=instance, **meal_data)
-
             for allergen in allergens_data:
                 Allergen.objects.create(meal=meal, **allergen)
 
         return instance
+
+    def validate(self, data):
+        # Check for allergen conflicts when creating/updating meal plans
+        if 'meals' in data and 'user_allergies' in data:
+            user_allergies = set(a.strip().lower() for a in data['user_allergies'].split(','))
+
+            for meal_data in data['meals']:
+                if 'allergens' in meal_data:
+                    for allergen_data in meal_data['allergens']:
+                        if allergen_data['allergen_name'].strip().lower() in user_allergies:
+                            raise serializers.ValidationError(
+                                f"Meal contains allergen '{allergen_data['allergen_name']}' that conflicts with user's allergies"
+                            )
+        return data
 

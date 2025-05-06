@@ -82,6 +82,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             return "trainer"
         return "user"
 
+    @property
+    def ensure_trainer_profile(self):
+        """Ensure that a Trainer profile is created if the user is a trainer."""
+        if self.is_trainer and not hasattr(self, 'trainer_profile'):
+            Trainer.objects.create(user=self)
+        return self.trainer_profile
+
 class Trainer(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="trainer_profile")
     experience = models.TextField()

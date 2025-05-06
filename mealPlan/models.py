@@ -5,7 +5,7 @@ class MealPlan(models.Model):
     mealplan_id = models.AutoField(primary_key=True)
     member_id = models.IntegerField()
     trainer_id = models.IntegerField()
-    
+
     requestee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -13,12 +13,19 @@ class MealPlan(models.Model):
         null=True,
         blank=True
     )
-    
+
     STATUS_CHOICES = [
         ('not_created', 'Not Created'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
+
+    PLAN_TYPE_CHOICES = [
+        ('personal', 'Personal'),
+        ('general', 'General'),
+    ]
+    plan_type = models.CharField(max_length=10, choices=PLAN_TYPE_CHOICES, default='personal')
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_created')
     mealplan_name = models.CharField(max_length=255)
     fitness_goal = models.CharField(max_length=255)
@@ -27,6 +34,7 @@ class MealPlan(models.Model):
     protein = models.IntegerField()
     carbs = models.IntegerField()
     instructions = models.TextField()
+    user_allergies = models.TextField(blank=True, null=True, help_text="User-declared allergies")
 
     def updatePlan(self, meals_data):
         """Updates all meals in the meal plan."""
@@ -58,6 +66,7 @@ class Meal(models.Model):
     calories = models.IntegerField()
     protein = models.IntegerField()
     carbs = models.IntegerField()
+    allergens = models.ManyToManyField('Allergen', related_name='meals', blank=True)
 
 class Feedback(models.Model):
     mealplan = models.ForeignKey(MealPlan, related_name="feedbacks", on_delete=models.CASCADE)
@@ -65,5 +74,4 @@ class Feedback(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Allergen(models.Model):
-    meal = models.ForeignKey(Meal, related_name="allergens", on_delete=models.CASCADE, null=True) # migration issue
     allergen_name = models.CharField(max_length=255)

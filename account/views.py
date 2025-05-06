@@ -4,14 +4,18 @@ from rest_framework import status, serializers
 from django.contrib.auth import login, logout
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import RegistrationSerializer, LoginSerializer, ForgotPasswordSerializer, TrainerSerializer
+from .serializers import *
 from .models import CustomUser, Trainer
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework import permissions
+from rest_framework import generics
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.generics import ListAPIView
 from .serializers import UserSerializer
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAdminUser
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -106,6 +110,8 @@ class TrainerProfileView(APIView):
         if not request.user.is_trainer:
             return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Ensure Trainer profile exists if user is a trainer
+        request.user.ensure_trainer_profile
         try:
             trainer = Trainer.objects.get(user=request.user)
             serializer = TrainerSerializer(trainer)
@@ -118,6 +124,8 @@ class TrainerProfileView(APIView):
         if not request.user.is_trainer:
             return Response({"error": "User is not a trainer."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Ensure Trainer profile exists if user is a trainer
+        request.user.ensure_trainer_profile
         try:
             trainer = Trainer.objects.get(user=request.user)
             serializer = TrainerSerializer(trainer, data=request.data, partial=True)
@@ -186,3 +194,83 @@ class MemberListView(ListAPIView):
 #     "trainer_profile": null
 #   }
 # ]
+
+class TrainerStatusUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id, action):
+        admin_user = request.user
+
+        if not admin_user.is_admin:
+            return Response({"detail": "You do not have permission to perform this action."}, status=403)
+
+        try:
+            target_user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+        if action == "assign":
+            if target_user.is_trainer:
+                return Response({"detail": "User is already a trainer."}, status=400)
+
+            target_user.is_trainer = True
+            target_user.save()
+
+            if not hasattr(target_user, 'trainer_profile'):
+                Trainer.objects.create(user=target_user, experience="", contact_no="")
+
+            return Response({"detail": "Trainer role assigned."}, status=200)
+
+        elif action == "remove":
+            if not target_user.is_trainer:
+                return Response({"detail": "User is not a trainer."}, status=400)
+
+            target_user.is_trainer = False
+            target_user.save()
+
+            # Optionally, delete the trainer profile
+            if hasattr(target_user, 'trainer_profile'):
+                target_user.trainer_profile.delete()
+
+            return Response({"detail": "Trainer role removed."}, status=200)
+
+        else:
+            return Response({"detail": "Invalid action. Use 'assign' or 'remove'."}, status=400)
+# POST /api/account/trainer-status/5/assign/
+# Authorization: Bearer <admin_token>
+
+class AdminUpdateMembershipTypeView(generics.UpdateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = MembershipTypeUpdateSerializer
+    permission_classes = [permissions.IsAdminUser]
+    http_method_names = ['patch']  # Only allow PATCH requests
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        
+        # Just update the membership type
+        instance.type_of_membership = serializer.validated_data['type_of_membership']
+        instance.save()
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MembershipStatusUpdateView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, user_id):
+        try:
+            member = CustomUser.objects.get(id=user_id, is_trainer=False, is_admin=False)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Member not found."}, status=404)
+
+        serializer = MembershipStatusUpdateSerializer(member, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": f"Membership status updated to {'active' if serializer.data['is_active'] else 'inactive'}.",
+                "data": serializer.data
+            })
+        return Response(serializer.errors, status=400)
