@@ -40,7 +40,7 @@ class WorkoutProgramViewSet(viewsets.ModelViewSet):
         Allows a member to request a personal workout plan.
         Creates an empty WorkoutProgram with status 'in_progress'.
         """
-        if getattr(request.user, 'is_trainer', False):
+        if getattr(request.user, 'is_trainer', True):
             return Response({'error': 'Trainers cannot request workouts.'}, status=403)
 
         workout = WorkoutProgram.objects.create(
