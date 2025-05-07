@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'profilee',
     'workout',
     'reports',
+    'workouts',
     
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
