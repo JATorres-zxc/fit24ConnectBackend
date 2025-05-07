@@ -1,99 +1,76 @@
 from rest_framework import serializers
-from account.models import CustomUser
-from .models import (
-    Exercise,
-    WorkoutProgram,
-    UserSpecificWorkoutProgram,
-    WorkoutDay,
-    WorkoutExercise
-)
+from .models import WorkoutProgram, WorkoutExercise, Feedback
 
-class ExerciseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Exercise
-        fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at')
+from rest_framework import serializers
+from .models import WorkoutProgram, WorkoutExercise, Feedback
 
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
-    exercise = ExerciseSerializer(read_only=True)
-    exercise_id = serializers.PrimaryKeyRelatedField(
-        queryset=Exercise.objects.all(),
-        source='exercise',
-        write_only=True
-    )
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkoutExercise
-        fields = '__all__'
-        extra_kwargs = {
-            'workout_day': {'required': False}
-        }
+        fields = ['id', 'name', 'description', 'muscle_group', 'image']
 
-class WorkoutDaySerializer(serializers.ModelSerializer):
-    exercises = WorkoutExerciseSerializer(many=True, required=False)
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            # If the image is a file, return its full URL
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None  # Return None if no image is provided
 
+    def to_internal_value(self, data):
+        # Allow both file uploads and URI links for the image field
+        image = data.get('image', None)
+        if isinstance(image, str):  # If it's a URI
+            data['image'] = image
+        return super().to_internal_value(data)
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
-        model = WorkoutDay
-        fields = '__all__'
-        extra_kwargs = {
-            'program': {'required': False}
-        }
+        model = Feedback
+        fields = ['id', 'program', 'comment', 'created_at']
 
-    def create(self, validated_data):
-        exercises_data = validated_data.pop('exercises', [])
-        workout_day = WorkoutDay.objects.create(**validated_data)
-        
-        for exercise_data in exercises_data:
-            WorkoutExercise.objects.create(workout_day=workout_day, **exercise_data)
-        
-        return workout_day
 
 class WorkoutProgramSerializer(serializers.ModelSerializer):
-    workout_days = WorkoutDaySerializer(many=True, required=False)
-    created_by = serializers.PrimaryKeyRelatedField(
-        default=serializers.CurrentUserDefault(),
-        queryset=CustomUser.objects.filter(is_trainer=True)
-    )
+    workout_exercises = WorkoutExerciseSerializer(many=True, required=False)
+    feedbacks = FeedbackSerializer(many=True, read_only=True)
+    requestee = serializers.IntegerField(allow_null=True, required=False)
 
     class Meta:
         model = WorkoutProgram
-        fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at')
+        fields = [
+            'id', 'program_name', 'trainer_id', 'requestee', 'status',
+            'fitness_goal', 'intensity_level', 'duration', 'workout_exercises', 'feedbacks'
+        ]
+
+    def to_internal_value(self, data):
+        # Convert requestee to an integer if it's provided as a string
+        requestee_value = data.get('requestee')
+        if requestee_value is not None:
+            try:
+                data['requestee'] = int(requestee_value)
+            except ValueError:
+                raise serializers.ValidationError({"requestee": "Invalid integer value."})
+
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
-        workout_days_data = validated_data.pop('workout_days', [])
+        exercises_data = validated_data.pop('workout_exercises', [])
         program = WorkoutProgram.objects.create(**validated_data)
-        
-        for day_data in workout_days_data:
-            exercises_data = day_data.pop('exercises', [])
-            workout_day = WorkoutDay.objects.create(program=program, **day_data)
-            
-            for exercise_data in exercises_data:
-                WorkoutExercise.objects.create(workout_day=workout_day, **exercise_data)
-        
+
+        for exercise_data in exercises_data:
+            WorkoutExercise.objects.create(program=program, **exercise_data)
+
         return program
 
-class UserSpecificWorkoutProgramSerializer(serializers.ModelSerializer):
-    base_program = WorkoutProgramSerializer(read_only=True)
-    base_program_id = serializers.PrimaryKeyRelatedField(
-        queryset=WorkoutProgram.objects.filter(program_type='user_specific'),
-        source='base_program',
-        write_only=True
-    )
-    assigned_to = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.filter(is_trainer=False)
-    )
-    assigned_by = serializers.PrimaryKeyRelatedField(
-        default=serializers.CurrentUserDefault(),
-        queryset=CustomUser.objects.filter(is_trainer=True)
-    )
+    def update(self, instance, validated_data):
+        exercises_data = validated_data.pop('workout_exercises', [])
+        instance = super().update(instance, validated_data)
 
-    class Meta:
-        model = UserSpecificWorkoutProgram
-        fields = '__all__'
-        read_only_fields = ('assigned_at', 'modified_at')
+        # Clear existing exercises and recreate them
+        instance.workout_exercises.all().delete()
+        for exercise_data in exercises_data:
+            WorkoutExercise.objects.create(program=instance, **exercise_data)
 
-    def validate(self, data):
-        if data['assigned_by'] == data['assigned_to']:
-            raise serializers.ValidationError("Trainer cannot assign program to themselves.")
-        return data
+        return instance
