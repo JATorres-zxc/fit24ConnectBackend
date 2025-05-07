@@ -1,55 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Access Logs Report</title>
     <style>
         body { font-family: Arial, sans-serif; }
-        h1 { color: #333; }
-        .header { margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .section { margin-bottom: 30px; }
-        .success { color: green; }
-        .failed { color: red; }
+        h1 { color: #2c3e50; }
+        h2 { color: #3498db; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .summary-item { margin-bottom: 5px; }
+        .facility-section { margin-bottom: 30px; }
+        .facility-header { background: #e9ecef; padding: 10px; border-radius: 5px; }
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .log-table th, .log-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .log-table th { background-color: #f2f2f2; }
+        .success { color: #28a745; }
+        .failed { color: #dc3545; }
+        .stats-table { width: 50%; margin: 10px 0; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Access Logs Report</h1>
-        {% if facility %}
-        <p>Facility: {{ facility.name }}</p>
-        {% endif %}
-        {% if start_date or end_date %}
-        <p>Date Range: {% if start_date %}{{ start_date }}{% else %}Start{% endif %} to {% if end_date %}{{ end_date }}{% else %}End{% endif %}</p>
-        {% endif %}
-        <p>Generated on: {{ now|date:"Y-m-d H:i" }}</p>
+        <h1>Facility Access Logs Report</h1>
+        <p>
+            {% if start_date and end_date %}
+                From {{ start_date }} to {{ end_date }}
+            {% else %}
+                All time data
+            {% endif %}
+        </p>
     </div>
 
-    {% for entry in data %}
-    <div class="section">
-        <h2>{{ entry.facility.name }} (Required Tier: {{ entry.facility.get_required_tier_display }})</h2>
-        <p>Total Accesses: {{ entry.logs.count }}</p>
+    <div class="summary">
+        <h2>Summary</h2>
+        <div class="summary-item"><strong>Total Scans:</strong> {{ summary.total_scans }}</div>
+        <div class="summary-item"><strong>Successful Accesses:</strong> {{ summary.success_scans }} ({{ summary.success_scans|div:summary.total_scans|floatformat:2 }}%)</div>
+        <div class="summary-item"><strong>Failed Accesses:</strong> {{ summary.failed_scans }} ({{ summary.failed_scans|div:summary.total_scans|floatformat:2 }}%)</div>
+        
+        {% if facility %}
+            <h3>Facility: {{ facility.name }}</h3>
+            <div class="summary-item"><strong>Required Tier:</strong> {{ facility.required_tier }}</div>
+        {% endif %}
+    </div>
 
-        <table>
+    {% for item in data %}
+    <div class="facility-section">
+        <div class="facility-header">
+            <h2>{{ item.facility.name }}</h2>
+            <p>Required Tier: {{ item.facility.required_tier }}</p>
+        </div>
+
+        <h3>Statistics</h3>
+        <table class="stats-table">
             <tr>
-                <th>User</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-                <th>Reason</th>
+                <th>Metric</th>
+                <th>Count</th>
             </tr>
-            {% for log in entry.logs %}
             <tr>
-                <td>{{ log.user.full_name }}</td>
-                <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
-                <td class="{{ log.status }}">{{ log.get_status_display }}</td>
-                <td>{{ log.reason|default:"-" }}</td>
+                <td>Total Scans</td>
+                <td>{{ item.stats.total_scans }}</td>
             </tr>
-            {% empty %}
             <tr>
-                <td colspan="4">No access logs found</td>
+                <td>Successful</td>
+                <td class="success">{{ item.stats.success_scans }}</td>
             </tr>
-            {% endfor %}
+            <tr>
+                <td>Failed</td>
+                <td class="failed">{{ item.stats.failed_scans }}</td>
+            </tr>
+        </table>
+
+        <h3>Recent Activity (Last 100)</h3>
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                    <th>User Tier</th>
+                    <th>Scan Method</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in item.logs %}
+                <tr>
+                    <td>{{ log.user.full_name }}</td>
+                    <td>{{ log.timestamp }}</td>
+                    <td class="{% if log.status == 'success' %}success{% else %}failed{% endif %}">
+                        {{ log.status|title }}
+                    </td>
+                    <td>{{ log.user_tier_at_time }}</td>
+                    <td>{{ log.scan_method|upper }}</td>
+                    <td>{{ log.reason|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
     {% endfor %}

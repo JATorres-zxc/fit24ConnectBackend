@@ -14,12 +14,14 @@ class QRScanView(APIView):
     def post(self, request):
         # Extract the raw QR code data
         qr_code_data = request.data.get("qrCode", None)
+        scan_method = request.data.get("scan_method", "qr")
+        location = request.data.get("location", None)
 
         if not qr_code_data:
             return Response({'error': 'QR Code data is missing'}, status=400)
 
         try:
-            # Parse JSON string inside `qrCode`
+            # Parse JSON string inside qrCode
             qr_data = json.loads(qr_code_data)
             facility_id = qr_data.get("id")  # Extract facility ID
         except (json.JSONDecodeError, KeyError, TypeError):
@@ -37,18 +39,39 @@ class QRScanView(APIView):
         if user.type_of_membership != facility.required_tier:
             reason = f"Required tier is {facility.required_tier}, but your tier is {user.type_of_membership}"
             AccessLog.objects.create(
-                user=user, facility=facility, status='failed', reason=reason
+                user=user,
+                facility=facility,
+                status='failed',
+                reason=reason,
+                user_tier_at_time=user.type_of_membership,
+                scan_method=scan_method,
+                location=location
             )
-            return Response({'status': 'failed', 'reason': reason}, status=403)
+            return Response({
+                'status': 'failed',
+                'reason': reason,
+                'required_tier': facility.required_tier,
+                'user_tier': user.type_of_membership
+            }, status=403)
 
         # Log successful access
-        AccessLog.objects.create(user=user, facility=facility, status='success')
+        AccessLog.objects.create(
+            user=user,
+            facility=facility,
+            status='success',
+            user_tier_at_time=user.type_of_membership,
+            scan_method=scan_method,
+            location=location
+        )
 
         return Response({
             'status': 'success',
             'user_name': user.full_name,
+            'user_tier': user.type_of_membership,
             'facility_name': facility.name,
-            'timestamp': now()
+            'facility_tier': facility.required_tier,
+            'timestamp': now(),
+            'access_granted': True
         })
 
 class UserAccessLogsView(generics.ListAPIView):
