@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 class WorkoutProgramViewSet(viewsets.ModelViewSet):
     queryset = WorkoutProgram.objects.all()
@@ -37,22 +38,35 @@ class WorkoutProgramViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def request_workout(self, request):
         """
-        Allows a member to request a personal workout plan.
-        Creates an empty WorkoutProgram with status 'in_progress'.
+        Allows a member to request a personal workout plan from a specific trainer.
         """
-        if getattr(request.user, 'is_trainer', True):
-            return Response({'error': 'Trainers cannot request workouts.'}, status=403)
+        if getattr(request.user, 'is_trainer', False):
+            return Response({'error': 'Trainers cannot request workout plans.'}, status=403)
 
-        workout = WorkoutProgram.objects.create(
+        trainer_id = request.data.get('trainer_id')
+        if not trainer_id:
+            raise ValidationError({'trainer_id': 'This field is required.'})
+
+        # Check if the user already has a pending or in-progress workout request
+        existing = WorkoutProgram.objects.filter(
             requestee=request.user,
-            trainer=None,
+            status__in=['pending', 'created']
+        ).exists()
+
+        if existing:
+            return Response({'error': 'You already have a pending personal workout plan.'}, status=400)
+
+        workout_program = WorkoutProgram.objects.create(
+            requestee=request.user,
+            trainer_id=trainer_id,
             program_name='',
-            fitness_goal='',
-            duration=0,
-            intensity_level='',
-            status='in_progress',
+            fitness_goal=request.data.get('fitness_goal', ''),
+            duration=request.data.get('duration', 0),
+            intensity_level=request.data.get('intensity_level', ''),
+            status='pending',  # Initial status
         )
-        serializer = self.get_serializer(workout)
+
+        serializer = self.get_serializer(workout_program)
         return Response(serializer.data, status=201)
 
 class WorkoutProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
