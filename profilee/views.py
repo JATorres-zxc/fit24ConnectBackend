@@ -13,7 +13,7 @@ class ProfileUpdateView(APIView):
             user,
             data=request.data,
             partial=True,
-            context={'is_trainer': user.is_trainer}  # Pass trainer status to serializer
+            context={'is_trainer': user.is_trainer}
         )
 
         if serializer.is_valid():
