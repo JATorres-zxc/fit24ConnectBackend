@@ -7,117 +7,86 @@ from .permissions import IsAdminUser
 from facility.models import Facility, AccessLog
 from rest_framework import generics, permissions
 from .models import Report
-from .serializers import ReportSerializer
+from .serializers import ReportSerializer, FacilityReportSerializer, MembershipReportSerializer
+from account.models import CustomUser
+from datetime import datetime
+from rest_framework.response import Response
 
-# class GenerateFacilityPDFReport(APIView):
-#     permission_classes = [IsAuthenticated, IsAdminUser]
-
-#     def get(self, request):
-#         facilities = Facility.objects.all().order_by('id')
-#         data = []
-
-#         for facility in facilities:
-#             logs = AccessLog.objects.filter(facility=facility).select_related('user').order_by('-timestamp')
-#             data.append({
-#                 'facility': facility,
-#                 'logs': logs
-#             })
-
-#         html = render_to_string('reports/facility_report_template.html', {'data': data})
-#         response = HttpResponse(content_type='application/pdf')
-#         response['Content-Disposition'] = 'attachment; filename="facility_report.pdf"'
-#         pisa_status = pisa.CreatePDF(html, dest=response)
-
-#         if pisa_status.err:
-#             return HttpResponse('Error generating PDF', status=500)
-#         return response
-
-
-class GenerateFacilityPDFReport(APIView):
+class GenerateReportView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    def post(self, request):
-        # Use test data from request body if provided, otherwise pull from DB
-        mock_data = [
-            {
-                "facility": {
-                    "name": "Main Gym",
-                    "required_tier": "tier1"
-                },
-                "logs": [
-                    {
-                        "user": {
-                            "full_name": "Alice Johnson",
-                            "email": "alice@example.com",
-                            "type_of_membership": "tier1",
-                            "username": "alicej"
-                        },
-                        "timestamp": "2025-04-05T10:00:00Z",
-                        "status": "success",
-                        "reason": ""
-                    },
-                    {
-                        "user": {
-                            "full_name": "Bob Smith",
-                            "email": "bob@example.com",
-                            "type_of_membership": "tier2",
-                            "username": "bobsmith"
-                        },
-                        "timestamp": "2025-04-05T12:30:00Z",
-                        "status": "failed",
-                        "reason": "Membership tier too low"
-                    }
-                ]
-            },
-            {
-                "facility": {
-                    "name": "Swimming Pool",
-                    "required_tier": "tier2"
-                },
-                "logs": []
-            }
-        ]
+    def get(self, request):
+        report_type = request.query_params.get('type')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        facility_id = request.query_params.get('facility_id')
 
-        # Now use mock_data to generate the report as shown above
-
-        if mock_data:
-            data = []
-            for facility in mock_data:
-                data.append({
-                    'facility': {
-                        'name': facility.get('name'),
-                        'required_tier': facility.get('required_tier')
-                    },
-                    'logs': facility.get('logs', [])
-                })
+        if report_type == 'membership':
+            return self.generate_membership_report(start_date, end_date)
+        elif report_type == 'access_logs':
+            return self.generate_access_logs_report(start_date, end_date, facility_id)
         else:
-            facilities = Facility.objects.all().order_by('id')
-            data = []
+            return Response({'error': 'Invalid report type'}, status=400)
 
-            for facility in facilities:
-                logs = AccessLog.objects.filter(facility=facility).select_related('user').order_by('-timestamp')
-                data.append({
-                    'facility': facility,
-                    'logs': logs
-                })
-        
-        # Debug: Print the data being passed to the template
-        print(data)
+    def generate_membership_report(self, start_date, end_date):
+        users = CustomUser.objects.all().order_by('-date_joined')
 
-        html = render_to_string('reports/facility_report_template.html', {'data': data})
-        
-        # Debug: Print the rendered HTML
-        print(html)
+        if start_date:
+            users = users.filter(date_joined__date__gte=start_date)
+        if end_date:
+            users = users.filter(date_joined__date__lte=end_date)
 
+        active_users = users.filter(is_active=True)
+        inactive_users = users.filter(is_active=False)
+
+        serializer = MembershipReportSerializer(users, many=True)
+
+        html = render_to_string('reports/membership_report_template.html', {
+            'active_users': active_users,
+            'inactive_users': inactive_users,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+
+        return self.generate_pdf_response(html, 'membership_report.pdf')
+
+    def generate_access_logs_report(self, start_date, end_date, facility_id):
+        facilities = Facility.objects.all()
+        if facility_id:
+            facilities = facilities.filter(id=facility_id)
+
+        data = []
+        for facility in facilities:
+            logs = AccessLog.objects.filter(facility=facility).select_related('user')
+
+            if start_date:
+                logs = logs.filter(timestamp__date__gte=start_date)
+            if end_date:
+                logs = logs.filter(timestamp__date__lte=end_date)
+
+            logs = logs.order_by('-timestamp')
+            data.append({
+                'facility': facility,
+                'logs': logs
+            })
+
+        html = render_to_string('reports/access_logs_report_template.html', {
+            'data': data,
+            'start_date': start_date,
+            'end_date': end_date,
+            'facility': facility if facility_id else None
+        })
+
+        return self.generate_pdf_response(html, 'access_logs_report.pdf')
+
+    def generate_pdf_response(self, html, filename):
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="facility_report.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         pisa_status = pisa.CreatePDF(html, dest=response)
 
         if pisa_status.err:
             return HttpResponse(f'Error generating PDF: {pisa_status.err}', status=500)
         return response
-
-
 
 class ReportListCreateView(generics.ListCreateAPIView):
     queryset = Report.objects.all().order_by('-created_at')
