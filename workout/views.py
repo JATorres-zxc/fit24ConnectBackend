@@ -63,7 +63,7 @@ class WorkoutProgramViewSet(viewsets.ModelViewSet):
             fitness_goal=request.data.get('fitness_goal', ''),
             duration=request.data.get('duration', 0),
             intensity_level=request.data.get('intensity_level', ''),
-            status='pending',  # Initial status
+            status=request.data.get('status', '')
         )
 
         serializer = self.get_serializer(workout_program)
