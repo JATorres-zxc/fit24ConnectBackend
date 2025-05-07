@@ -3,7 +3,16 @@ from account.models import CustomUser
 
 class ProfileSerializer(serializers.ModelSerializer):
     membership_status = serializers.SerializerMethodField()
-    experience = serializers.CharField(required=False, allow_blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize experience field with conditional write_only
+        is_trainer = self.context.get('is_trainer', False)
+        self.fields['experience'] = serializers.CharField(
+            required=False,
+            allow_blank=True,
+            write_only=not is_trainer
+        )
 
     class Meta:
         model = CustomUser
@@ -18,28 +27,33 @@ class ProfileSerializer(serializers.ModelSerializer):
         return "Active" if obj.is_membership_active else "Inactive"
 
     def to_representation(self, instance):
-        # Overrides get_experience logic during serialization
+        # Refresh the instance to ensure we have latest data
+        instance.refresh_from_db()
+
         data = super().to_representation(instance)
-        if instance.is_trainer and hasattr(instance, 'trainer_profile'):
-            data['experience'] = instance.trainer_profile.experience
+
+        # Check if user is trainer and has profile (using ensure_trainer_profile)
+        if instance.is_trainer:
+            trainer_profile = instance.ensure_trainer_profile
+            data['experience'] = trainer_profile.experience if trainer_profile else None
         else:
             data['experience'] = None
+
         return data
 
-    #  (PATCH) for both email and trainer_profile.experience
     def update(self, instance, validated_data):
-        # Update fields from CustomUser
         experience = validated_data.pop('experience', None)
-        email = validated_data.get('email')
 
+        # Update user fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Handle experience separately for trainer
-        if instance.is_trainer and hasattr(instance, 'trainer_profile') and experience is not None:
-            instance.trainer_profile.experience = experience
-            instance.trainer_profile.save()
+        # Handle experience for trainer
+        if instance.is_trainer and experience is not None:
+            trainer_profile = instance.ensure_trainer_profile
+            trainer_profile.experience = experience
+            trainer_profile.save()
 
         return instance
 
