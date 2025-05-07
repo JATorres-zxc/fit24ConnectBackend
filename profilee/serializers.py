@@ -3,16 +3,17 @@ from account.models import CustomUser
 
 class ProfileSerializer(serializers.ModelSerializer):
     membership_status = serializers.SerializerMethodField()
+    experience = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        write_only=True  # Default to write_only, we'll adjust in __init__
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Initialize experience field with conditional write_only
+        # Adjust experience field based on trainer status
         is_trainer = self.context.get('is_trainer', False)
-        self.fields['experience'] = serializers.CharField(
-            required=False,
-            allow_blank=True,
-            write_only=not is_trainer
-        )
+        self.fields['experience'].write_only = not is_trainer
 
     class Meta:
         model = CustomUser
@@ -20,25 +21,25 @@ class ProfileSerializer(serializers.ModelSerializer):
             'email', 'full_name', 'contact_number', 'messenger_account', 'complete_address',
             'nationality', 'birthdate', 'gender',
             'height', 'weight', 'age',
-            'type_of_membership', 'membership_status', 'experience'
+            'type_of_membership', 'membership_status'
+            # Note: 'experience' is not included here as it's not a model field
         ]
+        extra_kwargs = {
+            'email': {'read_only': True}  # protecting email from changes
+        }
 
     def get_membership_status(self, obj):
         return "Active" if obj.is_membership_active else "Inactive"
 
     def to_representation(self, instance):
-        # Refresh the instance to ensure we have latest data
-        instance.refresh_from_db()
-
         data = super().to_representation(instance)
-
-        # Check if user is trainer and has profile (using ensure_trainer_profile)
+        
         if instance.is_trainer:
             trainer_profile = instance.ensure_trainer_profile
             data['experience'] = trainer_profile.experience if trainer_profile else None
         else:
-            data['experience'] = None
-
+            data.pop('experience', None)  # Remove field entirely for non-trainers
+            
         return data
 
     def update(self, instance, validated_data):
@@ -56,7 +57,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             trainer_profile.save()
 
         return instance
-
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)

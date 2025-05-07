@@ -13,12 +13,13 @@ class ProfileUpdateView(APIView):
             user,
             data=request.data,
             partial=True,
-            context={'is_trainer': user.is_trainer}
+            context={'is_trainer': user.is_trainer}  # Pass trainer status to serializer
         )
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProfileDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
