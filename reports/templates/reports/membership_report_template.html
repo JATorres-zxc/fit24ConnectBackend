@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Membership Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { color: #333; }
+        .header { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .section { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Membership Report</h1>
+        {% if start_date or end_date %}
+        <p>Date Range: {% if start_date %}{{ start_date }}{% else %}Start{% endif %} to {% if end_date %}{{ end_date }}{% else %}End{% endif %}</p>
+        {% endif %}
+        <p>Generated on: {{ now|date:"Y-m-d H:i" }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Active Members ({{ active_users.count }})</h2>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Membership Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+            {% for user in active_users %}
+            <tr>
+                <td>{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.get_type_of_membership_display }}</td>
+                <td>{{ user.membership_start_date|default:"-" }}</td>
+                <td>{{ user.membership_end_date|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Inactive Members ({{ inactive_users.count }})</h2>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Membership Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+            {% for user in inactive_users %}
+            <tr>
+                <td>{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.get_type_of_membership_display }}</td>
+                <td>{{ user.membership_start_date|default:"-" }}</td>
+                <td>{{ user.membership_end_date|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

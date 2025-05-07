@@ -10,8 +10,13 @@ class Report(models.Model):
         ('facility', 'Facility'),
         ('user', 'User'),
         ('trainer', 'Trainer'),
-        ('general', 'General')
-    ], default='default_type') # to be discussed
+        ('general', 'General'),
+        ('membership', 'Membership'),
+        ('access_logs', 'Access Logs')
+    ])
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    facility = models.ForeignKey('facility.Facility', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.title

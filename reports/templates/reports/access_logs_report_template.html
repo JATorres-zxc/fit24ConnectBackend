@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Access Logs Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { color: #333; }
+        .header { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .section { margin-bottom: 30px; }
+        .success { color: green; }
+        .failed { color: red; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Access Logs Report</h1>
+        {% if facility %}
+        <p>Facility: {{ facility.name }}</p>
+        {% endif %}
+        {% if start_date or end_date %}
+        <p>Date Range: {% if start_date %}{{ start_date }}{% else %}Start{% endif %} to {% if end_date %}{{ end_date }}{% else %}End{% endif %}</p>
+        {% endif %}
+        <p>Generated on: {{ now|date:"Y-m-d H:i" }}</p>
+    </div>
+
+    {% for entry in data %}
+    <div class="section">
+        <h2>{{ entry.facility.name }} (Required Tier: {{ entry.facility.get_required_tier_display }})</h2>
+        <p>Total Accesses: {{ entry.logs.count }}</p>
+
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Timestamp</th>
+                <th>Status</th>
+                <th>Reason</th>
+            </tr>
+            {% for log in entry.logs %}
+            <tr>
+                <td>{{ log.user.full_name }}</td>
+                <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                <td class="{{ log.status }}">{{ log.get_status_display }}</td>
+                <td>{{ log.reason|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No access logs found</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endfor %}
+</body>
+</html>
