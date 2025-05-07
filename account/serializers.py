@@ -66,7 +66,10 @@ class UserSerializer(serializers.ModelSerializer):
             "trainer_profile",
             "height",
             "weight",
-            "age"
+            "age",
+            "type_of_membership",
+            "membership_start_date",
+            "membership_end_date",
         ]
 
 # --- LOGIN SERIALIZER ---
