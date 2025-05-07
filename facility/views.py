@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework import generics
 from .models import Facility, AccessLog
 from .serializers import QRScanSerializer, AccessLogSerializer
@@ -81,3 +81,24 @@ class UserAccessLogsView(generics.ListAPIView):
     def get_queryset(self):
         # Return only the current user's access logs
         return AccessLog.objects.filter(user=self.request.user).order_by('-timestamp')
+
+class UserAccessHistoryView(generics.ListAPIView):
+    serializer_class = AccessLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get_queryset(self):
+        user_id = self.request.query_params.get('user_id')
+        queryset = AccessLog.objects.all().select_related('user', 'facility')
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+            
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        
+        if start_date:
+            queryset = queryset.filter(timestamp__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(timestamp__date__lte=end_date)
+            
+        return queryset.order_by('-timestamp')

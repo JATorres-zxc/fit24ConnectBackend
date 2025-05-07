@@ -7,11 +7,11 @@ from .permissions import IsAdminUser
 from facility.models import Facility, AccessLog
 from rest_framework import generics, permissions
 from .models import Report
-from .serializers import ReportSerializer, FacilityReportSerializer, MembershipReportSerializer, AccessLogSerializer
+from .serializers import ReportSerializer, FacilityReportSerializer, MembershipReportSerializer
 from account.models import CustomUser
 from datetime import datetime
 from rest_framework.response import Response
-from django.db.models import Count, Q, models
+from django.db.models import Count, Q
 
 class GenerateReportView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -179,23 +179,3 @@ class FacilityAccessSummaryView(APIView):
             }
         })
 
-class UserAccessHistoryView(generics.ListAPIView):
-    serializer_class = AccessLogSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def get_queryset(self):
-        user_id = self.request.query_params.get('user_id')
-        queryset = AccessLog.objects.all().select_related('user', 'facility')
-        
-        if user_id:
-            queryset = queryset.filter(user_id=user_id)
-            
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
-        
-        if start_date:
-            queryset = queryset.filter(timestamp__date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(timestamp__date__lte=end_date)
-            
-        return queryset.order_by('-timestamp')
