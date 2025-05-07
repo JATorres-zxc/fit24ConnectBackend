@@ -118,4 +118,13 @@ class MembershipTypeUpdateSerializer(serializers.ModelSerializer):
 class MembershipStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['is_active']
+        fields = ['membership_start_date', 'membership_end_date']
+
+    def validate(self, data):
+        start_date = data.get('membership_start_date', self.instance.membership_start_date)
+        end_date = data.get('membership_end_date', self.instance.membership_end_date)
+
+        if start_date and end_date and end_date < start_date:
+            raise serializers.ValidationError("End date must be after start date.")
+
+        return data
