@@ -45,7 +45,12 @@ class AccessLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=[('success', 'Success'), ('failed', 'Failed')])
     reason = models.TextField(blank=True, null=True)
-    user_tier_at_time = models.CharField(max_length=10, blank=True, null=True)  # Store user's tier when scanning
+    user_tier_at_time = models.CharField(
+        max_length=10,
+        choices=[('tier1', 'Tier 1'), ('tier2', 'Tier 2'), ('tier3', 'Tier 3')],
+        blank=True,
+        null=True
+    )  # Store user's tier when scanning
     scan_method = models.CharField(max_length=20, choices=[
         ('qr', 'QR Code'),
         ('nfc', 'NFC'),
