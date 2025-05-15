@@ -7,6 +7,7 @@ from .serializers import QRScanSerializer, AccessLogSerializer
 from datetime import date
 from django.utils.timezone import now
 import json
+from django.utils import timezone
 
 class QRScanView(APIView):
     permission_classes = [IsAuthenticated]
@@ -35,23 +36,34 @@ class QRScanView(APIView):
         except Facility.DoesNotExist:
             return Response({'error': 'Facility not found'}, status=404)
 
-        # Check membership tier
-        if user.type_of_membership != facility.required_tier:
-            reason = f"Required tier is {facility.required_tier}, but your tier is {user.type_of_membership}"
+        # Check membership tier with correct hierarchy logic
+        user_tier = user.type_of_membership
+        required_tier = facility.required_tier
+        
+        # Define tier hierarchy
+        tier_hierarchy = {
+            'tier1': 1,
+            'tier2': 2,
+            'tier3': 3
+        }
+        
+        # Check if user's tier is at least as high as required tier
+        if tier_hierarchy[user_tier] < tier_hierarchy[required_tier]:
+            reason = f"Required tier is {required_tier}, but your tier is {user_tier}"
             AccessLog.objects.create(
                 user=user,
                 facility=facility,
                 status='failed',
                 reason=reason,
-                user_tier_at_time=user.type_of_membership,
+                user_tier_at_time=user_tier,
                 scan_method=scan_method,
                 location=location
             )
             return Response({
                 'status': 'failed',
                 'reason': reason,
-                'required_tier': facility.required_tier,
-                'user_tier': user.type_of_membership
+                'required_tier': required_tier,
+                'user_tier': user_tier
             }, status=403)
 
         # Log successful access
@@ -59,7 +71,7 @@ class QRScanView(APIView):
             user=user,
             facility=facility,
             status='success',
-            user_tier_at_time=user.type_of_membership,
+            user_tier_at_time=user_tier,
             scan_method=scan_method,
             location=location
         )
@@ -67,10 +79,10 @@ class QRScanView(APIView):
         return Response({
             'status': 'success',
             'user_name': user.full_name,
-            'user_tier': user.type_of_membership,
+            'user_tier': user_tier,
             'facility_name': facility.name,
-            'facility_tier': facility.required_tier,
-            'timestamp': now(),
+            'facility_tier': required_tier,
+            'timestamp': timezone.now().isoformat(),
             'access_granted': True
         })
 
