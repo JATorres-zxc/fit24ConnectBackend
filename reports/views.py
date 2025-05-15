@@ -62,11 +62,12 @@ class GenerateReportView(APIView):
         if facility_id:
             facilities = facilities.filter(id=facility_id)
 
-        # Get summary statistics for the report
         summary = {
             'total_scans': 0,
             'success_scans': 0,
             'failed_scans': 0,
+            'success_percentage': 0,
+            'failed_percentage': 0,
             'facilities': []
         }
 
@@ -80,8 +81,7 @@ class GenerateReportView(APIView):
                 logs = logs.filter(timestamp__date__lte=end_date)
 
             logs = logs.order_by('-timestamp')
-            
-            # Calculate stats for this facility
+
             facility_stats = {
                 'id': facility.id,
                 'name': facility.name,
@@ -91,24 +91,29 @@ class GenerateReportView(APIView):
                 'failed_scans': logs.filter(status='failed').count(),
                 'scan_methods': list(logs.values('scan_method').annotate(count=Count('id')))
             }
-            
+
             summary['total_scans'] += facility_stats['total_scans']
             summary['success_scans'] += facility_stats['success_scans']
             summary['failed_scans'] += facility_stats['failed_scans']
             summary['facilities'].append(facility_stats)
-            
+
             data.append({
                 'facility': facility,
                 'logs': logs[:100],  # Limit to 100 most recent for detailed view
                 'stats': facility_stats
             })
 
+        # Calculate success and failure percentages
+        if summary['total_scans'] > 0:
+            summary['success_percentage'] = (summary['success_scans'] / summary['total_scans']) * 100
+            summary['failed_percentage'] = (summary['failed_scans'] / summary['total_scans']) * 100
+
         html = render_to_string('reports/access_logs_report_template.html', {
             'data': data,
             'summary': summary,
             'start_date': start_date,
             'end_date': end_date,
-            'facility': facility if facility_id else None
+            'facility': facilities.first() if facility_id else None
         })
 
         filename = f"access_logs_report_{start_date}_to_{end_date}.pdf" if start_date and end_date else 'access_logs_report.pdf'

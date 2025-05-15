@@ -35,8 +35,8 @@
     <div class="summary">
         <h2>Summary</h2>
         <div class="summary-item"><strong>Total Scans:</strong> {{ summary.total_scans }}</div>
-        <div class="summary-item"><strong>Successful Accesses:</strong> {{ summary.success_scans }} ({{ summary.success_scans|div:summary.total_scans|floatformat:2 }}%)</div>
-        <div class="summary-item"><strong>Failed Accesses:</strong> {{ summary.failed_scans }} ({{ summary.failed_scans|div:summary.total_scans|floatformat:2 }}%)</div>
+        <div class="summary-item"><strong>Successful Accesses:</strong> {{ summary.success_scans }} ({{ summary.success_percentage|floatformat:2 }}%)</div>
+        <div class="summary-item"><strong>Failed Accesses:</strong> {{ summary.failed_scans }} ({{ summary.failed_percentage|floatformat:2 }}%)</div>
         
         {% if facility %}
             <h3>Facility: {{ facility.name }}</h3>
