@@ -12,12 +12,14 @@ from account.models import CustomUser
 from datetime import datetime
 from rest_framework.response import Response
 from django.db.models import Count, Q
+from django.db import models
 
 class GenerateReportView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        report_type = request.query_params.get('type')
+        report_type = request.query_params.get('type', '').strip().lower()
+        print(f"Report type received: {report_type}")
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
         facility_id = request.query_params.get('facility_id')
@@ -27,7 +29,11 @@ class GenerateReportView(APIView):
         elif report_type == 'access_logs':
             return self.generate_access_logs_report(start_date, end_date, facility_id)
         else:
-            return Response({'error': 'Invalid report type'}, status=400)
+            return Response({
+                'error': 'Invalid report type',
+                'valid_types': ['membership', 'access_logs'],
+                'received_type': report_type
+            }, status=400)
 
     def generate_membership_report(self, start_date, end_date):
         users = CustomUser.objects.all().order_by('-date_joined')
