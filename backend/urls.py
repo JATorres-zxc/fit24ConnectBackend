@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/profilee/", include("profilee.urls")),
     path('api/workout/', include('workout.urls')),
     path('api/reports/', include('reports.urls')),
+    path('api/workouts/', include('workouts.urls')),
 ]
 
 # Serve media files in development
