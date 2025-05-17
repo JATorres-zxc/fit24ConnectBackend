@@ -44,4 +44,26 @@ class AccessLog(models.Model):
     facility = models.ForeignKey(Facility, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=[('success', 'Success'), ('failed', 'Failed')])
-    reason = models.TextField(blank=True, null=True)  # Reason for failed access
+    reason = models.TextField(blank=True, null=True)
+    user_tier_at_time = models.CharField(
+        max_length=10,
+        choices=[('tier1', 'Tier 1'), ('tier2', 'Tier 2'), ('tier3', 'Tier 3')],
+        blank=True,
+        null=True
+    )  # Store user's tier when scanning
+    scan_method = models.CharField(max_length=20, choices=[
+        ('qr', 'QR Code'),
+        ('nfc', 'NFC'),
+        ('manual', 'Manual Entry'),
+        ('admin', 'Admin Override')
+    ], default='qr')
+    location = models.CharField(max_length=255, blank=True, null=True)  # Optional: GPS coordinates if available
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['facility']),
+            models.Index(fields=['user']),
+            models.Index(fields=['status']),
+        ]
