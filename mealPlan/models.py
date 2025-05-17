@@ -71,7 +71,8 @@ class Meal(models.Model):
 class Feedback(models.Model):
     mealplan = models.ForeignKey(MealPlan, related_name="feedbacks", on_delete=models.CASCADE)
     comment = models.TextField()
+    rating = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
 class Allergen(models.Model):
     allergen_name = models.CharField(max_length=255)

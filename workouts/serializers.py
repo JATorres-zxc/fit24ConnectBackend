@@ -29,7 +29,7 @@ class WorkoutExerciseSerializer(serializers.ModelSerializer):
 class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
-        fields = ['id', 'program', 'comment', 'created_at']
+        fields = ['id', 'program', 'comment', 'rating', 'created_at']
 
 
 class WorkoutProgramSerializer(serializers.ModelSerializer):
