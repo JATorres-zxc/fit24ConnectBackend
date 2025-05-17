@@ -4,7 +4,7 @@ from .views import WorkoutProgramViewSet, FeedbackViewSet
 
 router = DefaultRouter()
 router.register(r'workout-programs', WorkoutProgramViewSet, basename='workoutprogram')
-router.register(r'feedback', FeedbackViewSet, basename='feedback')
+router.register(r'feedbacks', FeedbackViewSet, basename='feedback')
 
 urlpatterns = [
     path('', include(router.urls)),

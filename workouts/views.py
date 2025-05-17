@@ -26,11 +26,8 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         program_id = self.request.data.get('program')
+        print(f"Received data: {self.request.data}")  # Debugging
         if not program_id:
             raise ValidationError({"error": "program field is required"})
-
-        # Check if the program exists
         program = get_object_or_404(WorkoutProgram, pk=program_id)
-
-        # Automatically associate the feedback with the program
         serializer.save(program=program)
