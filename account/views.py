@@ -270,7 +270,12 @@ class MembershipStatusUpdateView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({
-                "message": f"Membership status updated to {'active' if serializer.data['is_active'] else 'inactive'}.",
+                "message": f"Membership status updated to {'active' if member.is_membership_active else 'inactive'}.",
                 "data": serializer.data
             })
         return Response(serializer.errors, status=400)
+# PATCH Payload example:
+# {
+#   "membership_start_date": "2025-05-01",
+#   "membership_end_date": "2025-08-01"
+# }
