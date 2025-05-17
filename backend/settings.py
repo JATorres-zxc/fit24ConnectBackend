@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'notification.apps.NotificationConfig',
 ]
 
 # Media files (for storing QR code images)
