@@ -196,8 +196,6 @@ class MemberListView(ListAPIView):
 # ]
 
 class TrainerStatusUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, user_id, action):
         admin_user = request.user
 
@@ -209,42 +207,49 @@ class TrainerStatusUpdateView(APIView):
         except CustomUser.DoesNotExist:
             return Response({"detail": "User not found."}, status=404)
 
-        if action == "assign":
-            if target_user.is_trainer:
+        # ✅ Fix inconsistencies before proceeding
+        self.fix_trainer_inconsistency(target_user)
+
+        is_in_trainer_table = Trainer.objects.filter(user=target_user).exists()
+
+        if action == 'make':
+            if target_user.is_trainer and is_in_trainer_table:
                 return Response({"detail": "User is already a trainer."}, status=400)
 
-            # Use transaction to ensure atomicity
-            with transaction.atomic():
-                target_user.is_trainer = True
-                target_user.save()
-                
-                # Create trainer profile if it doesn't exist
-                Trainer.objects.get_or_create(user=target_user, defaults={
-                    'experience': '', 
-                    'contact_no': ''
-                })
+            target_user.is_trainer = True
+            target_user.save()
 
-            return Response({"detail": "Trainer role assigned."}, status=200)
+            if not is_in_trainer_table:
+                Trainer.objects.create(user=target_user)
 
-        elif action == "remove":
-            # More robust check - verify they exist in the Trainer table
-            is_in_trainer_table = Trainer.objects.filter(user=target_user).exists()
-            
+            return Response({"detail": "User is now a trainer."})
+
+        elif action == 'remove':
             if not target_user.is_trainer and not is_in_trainer_table:
                 return Response({"detail": "User is not a trainer."}, status=400)
 
-            # Use transaction to ensure atomicity
-            with transaction.atomic():
-                target_user.is_trainer = False
-                target_user.save()
-                
-                # Delete the trainer profile if it exists
+            target_user.is_trainer = False
+            target_user.save()
+
+            if is_in_trainer_table:
                 Trainer.objects.filter(user=target_user).delete()
 
-            return Response({"detail": "Trainer role removed."}, status=200)
+            return Response({"detail": "Trainer status removed."})
 
         else:
-            return Response({"detail": "Invalid action. Use 'assign' or 'remove'."}, status=400)
+            return Response({"detail": "Invalid action."}, status=400)
+
+    def fix_trainer_inconsistency(self, user):
+        """
+        Automatically aligns is_trainer flag with Trainer table.
+        """
+        trainer_exists = Trainer.objects.filter(user=user).exists()
+        if trainer_exists and not user.is_trainer:
+            user.is_trainer = True
+            user.save()
+        elif not trainer_exists and user.is_trainer:
+            user.is_trainer = False
+            user.save()
 # POST /api/account/trainer-status/5/assign/
 # Authorization: Bearer <admin_token>
 
