@@ -13,8 +13,15 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = Notification.objects.filter(user=self.request.user).order_by('-created_at')
         if self.request.query_params.get('unread') == 'true':
             queryset = queryset.filter(is_read=False)
+        if category := self.request.query_params.get('category'):
+            queryset = queryset.filter(category=category)
         return queryset
-
+    
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': count})
+    
     @action(detail=True, methods=['patch'], url_path='mark-as-read')
     def mark_as_read(self, request, pk=None):
         try:
