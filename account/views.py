@@ -213,24 +213,33 @@ class TrainerStatusUpdateView(APIView):
             if target_user.is_trainer:
                 return Response({"detail": "User is already a trainer."}, status=400)
 
-            target_user.is_trainer = True
-            target_user.save()
-
-            if not hasattr(target_user, 'trainer_profile'):
-                Trainer.objects.create(user=target_user, experience="", contact_no="")
+            # Use transaction to ensure atomicity
+            with transaction.atomic():
+                target_user.is_trainer = True
+                target_user.save()
+                
+                # Create trainer profile if it doesn't exist
+                Trainer.objects.get_or_create(user=target_user, defaults={
+                    'experience': '', 
+                    'contact_no': ''
+                })
 
             return Response({"detail": "Trainer role assigned."}, status=200)
 
         elif action == "remove":
-            if not target_user.is_trainer:
+            # More robust check - verify they exist in the Trainer table
+            is_in_trainer_table = Trainer.objects.filter(user=target_user).exists()
+            
+            if not target_user.is_trainer and not is_in_trainer_table:
                 return Response({"detail": "User is not a trainer."}, status=400)
 
-            target_user.is_trainer = False
-            target_user.save()
-
-            # Optionally, delete the trainer profile
-            if hasattr(target_user, 'trainer_profile'):
-                target_user.trainer_profile.delete()
+            # Use transaction to ensure atomicity
+            with transaction.atomic():
+                target_user.is_trainer = False
+                target_user.save()
+                
+                # Delete the trainer profile if it exists
+                Trainer.objects.filter(user=target_user).delete()
 
             return Response({"detail": "Trainer role removed."}, status=200)
 
