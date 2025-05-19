@@ -8,11 +8,12 @@ class Notification(models.Model):
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
+    metadata = models.JSONField(null=True, blank=True)
     CATEGORY_CHOICES = [
         ('info', 'Info'),
         ('warning', 'Warning'),
         ('system', 'System'),
+        ('security', 'Security Alert'),  # New category for security-related notifications
     ]
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='info')
     
