@@ -87,18 +87,23 @@ class ForgotPasswordView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]  # Only authenticated users can logout
 
     def post(self, request):
-        refresh_token = request.data.get("refresh")
-        if not refresh_token:
-            return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+            refresh_token = request.data.get("refresh")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            
+            # Clear any stored tokens on the frontend by returning instructions
+            return Response({
+                "message": "Logged out successfully.",
+                "clear_tokens": True
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
-            return Response({"error": "Invalid or expired refresh token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # Trainer Profile View
@@ -196,8 +201,6 @@ class MemberListView(ListAPIView):
 # ]
 
 class TrainerStatusUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, user_id, action):
         admin_user = request.user
 
@@ -209,33 +212,49 @@ class TrainerStatusUpdateView(APIView):
         except CustomUser.DoesNotExist:
             return Response({"detail": "User not found."}, status=404)
 
-        if action == "assign":
-            if target_user.is_trainer:
+        # ✅ Fix inconsistencies before proceeding
+        self.fix_trainer_inconsistency(target_user)
+
+        is_in_trainer_table = Trainer.objects.filter(user=target_user).exists()
+
+        if action == 'make':
+            if target_user.is_trainer and is_in_trainer_table:
                 return Response({"detail": "User is already a trainer."}, status=400)
 
             target_user.is_trainer = True
             target_user.save()
 
-            if not hasattr(target_user, 'trainer_profile'):
-                Trainer.objects.create(user=target_user, experience="", contact_no="")
+            if not is_in_trainer_table:
+                Trainer.objects.create(user=target_user)
 
-            return Response({"detail": "Trainer role assigned."}, status=200)
+            return Response({"detail": "User is now a trainer."})
 
-        elif action == "remove":
-            if not target_user.is_trainer:
+        elif action == 'remove':
+            if not target_user.is_trainer and not is_in_trainer_table:
                 return Response({"detail": "User is not a trainer."}, status=400)
 
             target_user.is_trainer = False
             target_user.save()
 
-            # Optionally, delete the trainer profile
-            if hasattr(target_user, 'trainer_profile'):
-                target_user.trainer_profile.delete()
+            if is_in_trainer_table:
+                Trainer.objects.filter(user=target_user).delete()
 
-            return Response({"detail": "Trainer role removed."}, status=200)
+            return Response({"detail": "Trainer status removed."})
 
         else:
-            return Response({"detail": "Invalid action. Use 'assign' or 'remove'."}, status=400)
+            return Response({"detail": "Invalid action."}, status=400)
+
+    def fix_trainer_inconsistency(self, user):
+        """
+        Automatically aligns is_trainer flag with Trainer table.
+        """
+        trainer_exists = Trainer.objects.filter(user=user).exists()
+        if trainer_exists and not user.is_trainer:
+            user.is_trainer = True
+            user.save()
+        elif not trainer_exists and user.is_trainer:
+            user.is_trainer = False
+            user.save()
 # POST /api/account/trainer-status/5/assign/
 # Authorization: Bearer <admin_token>
 

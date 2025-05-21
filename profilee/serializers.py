@@ -12,8 +12,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            'email', 'full_name', 'contact_number', 'messenger_account', 'complete_address',
-            'nationality', 'birthdate', 'gender',
+            'email', 'full_name', 'contact_number', 'complete_address',
             'height', 'weight', 'age',
             'type_of_membership', 'membership_status',
             'experience'

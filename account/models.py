@@ -91,8 +91,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 class Trainer(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="trainer_profile")
-    experience = models.TextField()
-    contact_no = models.CharField(max_length=15)
+    experience = models.TextField(blank=True, default="")
+    contact_no = models.CharField(max_length=15, blank=True, default="")
 
     def __str__(self):
         return self.user.full_name or self.user.email

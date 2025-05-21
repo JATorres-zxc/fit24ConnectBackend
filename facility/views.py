@@ -50,7 +50,7 @@ class QRScanView(APIView):
         # Check if user's tier is at least as high as required tier
         if tier_hierarchy[user_tier] < tier_hierarchy[required_tier]:
             reason = f"Required tier is {required_tier}, but your tier is {user_tier}"
-            AccessLog.objects.create(
+            access_log = AccessLog.objects.create(
                 user=user,
                 facility=facility,
                 status='failed',
@@ -59,11 +59,14 @@ class QRScanView(APIView):
                 scan_method=scan_method,
                 location=location
             )
+            
+            # The signal will now automatically create notifications for admins
             return Response({
                 'status': 'failed',
                 'reason': reason,
                 'required_tier': required_tier,
-                'user_tier': user_tier
+                'user_tier': user_tier,
+                'message': 'Access denied. Admins have been notified.'
             }, status=403)
 
         # Log successful access

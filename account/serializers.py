@@ -24,6 +24,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"email": "A user with this email already exists."})
         return data
 
+    # serializers.py
     def create(self, validated_data):
         is_trainer = validated_data.pop('is_trainer', False)
         user = User.objects.create_user(
@@ -31,11 +32,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             is_trainer=is_trainer
         )
-
-        # Create Trainer profile if user is a trainer
-        if is_trainer:
-            Trainer.objects.create(user=user, experience="", contact_no="")
-
         return user
 
 # --- SIMPLIFIED USER SERIALIZER FOR USE INSIDE TRAINER ---

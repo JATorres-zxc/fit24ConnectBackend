@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    'account',
+    'account.apps.AccountConfig',
     'facility',
     'announcement',
     'mealPlan',
@@ -55,7 +55,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'notification.apps.NotificationConfig',
+    'django_celery_beat',
 ]
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+CELERY_ENABLE_UTC = True
+CELERY_TIMEZONE = 'Asia/Manila'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
 
 # Media files (for storing QR code images)
 MEDIA_URL = '/media/'
@@ -69,6 +78,14 @@ AUTH_USER_MODEL = 'account.CustomUser'
 CSRF_COOKIE_SECURE = True
 
 SESSION_COOKIE_SECURE = True
+
+CELERY_BEAT_SCHEDULE = {
+    'send-membership-expiry-notifications-daily': {
+        'task': 'notification.tasks.send_membership_expiry_notifications',
+        'schedule': 86400.0,  # every 24 hours
+    },
+}
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
