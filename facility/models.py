@@ -29,7 +29,12 @@ class Facility(models.Model):
         # Save the QR code image
         buffer = BytesIO()
         qr.save(buffer, format="PNG")
-        self.qr_code.save(f"facility_{self.id}.png", ContentFile(buffer.getvalue()), save=False)
+
+        # Clean the facility name to be filename-safe
+        safe_name = self.name.lower().replace(' ', '_')
+        filename = f"{safe_name}_qr_facilityid_{self.id}.png"
+
+        self.qr_code.save(filename, ContentFile(buffer.getvalue()), save=False)
 
     def save(self, *args, **kwargs):
         """Generate QR code only after the object is saved."""
