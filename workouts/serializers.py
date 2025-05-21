@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import WorkoutProgram, WorkoutExercise, Feedback
 
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = WorkoutExercise
@@ -55,17 +55,44 @@ class WorkoutProgramSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(data)
 
+    def validate(self, data):
+        if self.context['request'].method == 'POST' and not self.initial_data.get('workout_exercises'):
+            raise serializers.ValidationError({"workout_exercises": "At least one exercise is required."})
+        return data
+
     def create(self, validated_data):
-        exercises_data = validated_data.pop('workout_exercises', [])
+        exercises_data = self.initial_data.get('workout_exercises', [])
         program = WorkoutProgram.objects.create(**validated_data)
 
         for exercise_data in exercises_data:
             WorkoutExercise.objects.create(program=program, **exercise_data)
 
         return program
+# right payload for post - example only
+# {
+#   "program_name": "Leg Day",
+#   "trainer_id": 5,
+#   "requestee": 12,
+#   "duration": 30,
+#   "fitness_goal": "Strength",
+#   "intensity_level": "High",
+#   "workout_exercises": [
+#     {
+#       "name": "Squat",
+#       "description": "Barbell squats",
+#       "muscle_group": "Legs"
+#     },
+#     {
+#       "name": "Deadlift",
+#       "description": "Romanian deadlifts",
+#       "muscle_group": "Hamstrings"
+#     }
+#   ]
+# }
+# If workout_exercises is empty or omitted, of course nothing will be created.
 
     def update(self, instance, validated_data):
-        exercises_data = validated_data.pop('workout_exercises', [])
+        exercises_data = self.initial_data.get('workout_exercises', [])
         instance = super().update(instance, validated_data)
 
         # Clear existing exercises and recreate them
