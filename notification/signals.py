@@ -24,9 +24,10 @@ def notify_failed_access(sender, instance, created, **kwargs):
             Notification(
                 user_id=admin_id,
                 title="Unauthorized Access Attempt",
-                message=f"User {instance.user.email} (Tier: {instance.user_tier_at_time}) "
-                        f"attempted to access {instance.facility.name} (Required Tier: {instance.facility.required_tier}). "
-                        f"Reason: {instance.reason}",
+                # message=f"User {instance.user.email} (Tier: {instance.user_tier_at_time}) "
+                #         f"attempted to access {instance.facility.name} (Required Tier: {instance.facility.required_tier}). "
+                #         f"Reason: {instance.reason}",
+                message = f"{instance.user.full_name} ({instance.user.email}) attempted to access {instance.facility.name} without the required tier.",
                 category='security'
             )
             for admin_id in admin_ids
