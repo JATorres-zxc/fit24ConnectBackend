@@ -225,7 +225,7 @@ class TrainerStatusUpdateView(APIView):
             target_user.save()
 
             if not is_in_trainer_table:
-                Trainer.objects.create(user=target_user)
+                Trainer.objects.get_or_create(user=target_user)
 
             return Response({"detail": "User is now a trainer."})
 
