@@ -54,6 +54,27 @@ class QRScanView(APIView):
                 'message': 'Access denied. Your membership is inactive. Please renew your membership.'
             }, status=403)
 
+        # ✅ Trainer override: grant access to all facilities
+        if user.is_trainer:
+            AccessLog.objects.create(
+                user=user,
+                facility=facility,
+                status='success',
+                user_tier_at_time='trainer',
+                scan_method=scan_method,
+                location=location
+            )
+            return Response({
+                'status': 'success',
+                'user_name': user.full_name,
+                'user_tier': 'trainer',
+                'facility_name': facility.name,
+                'facility_tier': facility.required_tier,
+                'timestamp': timezone.now().isoformat(),
+                'access_granted': True,
+                'message': 'Access granted (Trainer)'
+            })
+
         # Check membership tier with correct hierarchy logic
         user_tier = user.type_of_membership
         required_tier = facility.required_tier
