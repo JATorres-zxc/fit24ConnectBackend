@@ -33,7 +33,14 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 
 class WorkoutProgramSerializer(serializers.ModelSerializer):
-    workout_exercises = WorkoutExerciseSerializer(many=True, required=False)
+    # write-only field for creating/updating exercises
+    workout_exercises = WorkoutExerciseSerializer(many=True, required=False, write_only=True)
+
+    # read-only field for viewing exercises
+    workout_exercises_read = WorkoutExerciseSerializer(source='workout_exercises', many=True, read_only=True)
+    # POST/PUT/PATCH: You send data to workout_exercises to create or update exercises.
+    # GET: You receive workout_exercises_read containing the list of exercises.
+
     feedbacks = FeedbackSerializer(many=True, read_only=True)
     requestee = serializers.IntegerField(allow_null=True, required=False)
 
@@ -46,7 +53,10 @@ class WorkoutProgramSerializer(serializers.ModelSerializer):
         model = WorkoutProgram
         fields = [
             'id', 'program_name', 'trainer_id', 'requestee', 'status',
-            'fitness_goal', 'intensity_level', 'duration', 'workout_exercises', 'feedbacks'
+            'fitness_goal', 'intensity_level', 'duration',
+            'workout_exercises',        # write-only
+            'workout_exercises_read',   # read-only
+            'feedbacks'
         ]
 
     def to_internal_value(self, data):
