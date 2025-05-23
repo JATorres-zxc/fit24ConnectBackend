@@ -52,7 +52,7 @@ class QRScanView(APIView):
                 'user_tier': 'trainer',
                 'facility_name': facility.name,
                 'facility_tier': facility.required_tier,
-                'timestamp': timezone.now().isoformat(),
+                'timestamp': timezone.localtime(timezone.now()).isoformat(),
                 'access_granted': True,
                 'message': 'Access granted (Trainer)'
             })
