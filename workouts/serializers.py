@@ -37,6 +37,11 @@ class WorkoutProgramSerializer(serializers.ModelSerializer):
     feedbacks = FeedbackSerializer(many=True, read_only=True)
     requestee = serializers.IntegerField(allow_null=True, required=False)
 
+    program_name = serializers.CharField(allow_null=True, required=False)
+    duration = serializers.IntegerField(allow_null=True, required=False)
+    fitness_goal = serializers.CharField(allow_null=True, required=False)
+    intensity_level = serializers.CharField(allow_null=True, required=False)
+
     class Meta:
         model = WorkoutProgram
         fields = [
@@ -56,8 +61,18 @@ class WorkoutProgramSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def validate(self, data):
-        if self.context['request'].method == 'POST' and not self.initial_data.get('workout_exercises'):
-            raise serializers.ValidationError({"workout_exercises": "At least one exercise is required."})
+        # Only enforce workout_exercises requirement if explicitly passed
+        if self.context['request'].method == 'POST':
+            exercises = self.initial_data.get('workout_exercises')
+            if exercises is not None and len(exercises) == 0:
+                # Allow empty for trainer to fill later
+                pass
+            # Optionally, check required fields only if status is not "pending"
+            if data.get('status') != 'pending':
+                required_fields = ['program_name', 'duration', 'fitness_goal', 'intensity_level']
+                for field in required_fields:
+                    if not data.get(field):
+                        raise serializers.ValidationError({field: f"{field.replace('_', ' ').capitalize()} is required."})
         return data
 
     def create(self, validated_data):
