@@ -36,25 +36,7 @@ class QRScanView(APIView):
         except Facility.DoesNotExist:
             return Response({'error': 'Facility not found'}, status=404)
 
-        # Check if user's membership is active
-        if not user.is_membership_active:
-            reason = "Inactive membership"
-            AccessLog.objects.create(
-                user=user,
-                facility=facility,
-                status='failed',
-                reason=reason,
-                user_tier_at_time=user.type_of_membership,
-                scan_method=scan_method,
-                location=location
-            )
-            return Response({
-                'status': 'failed',
-                'reason': reason,
-                'message': 'Access denied. Your membership is inactive. Please renew your membership.'
-            }, status=403)
-
-        # ✅ Trainer override: grant access to all facilities
+        # ✅ Trainer override: allow access regardless of membership
         if user.is_trainer:
             AccessLog.objects.create(
                 user=user,
@@ -75,7 +57,25 @@ class QRScanView(APIView):
                 'message': 'Access granted (Trainer)'
             })
 
-        # Check membership tier with correct hierarchy logic
+        # Check if user's membership is active
+        if not user.is_membership_active:
+            reason = "Inactive membership"
+            AccessLog.objects.create(
+                user=user,
+                facility=facility,
+                status='failed',
+                reason=reason,
+                user_tier_at_time=user.type_of_membership,
+                scan_method=scan_method,
+                location=location
+            )
+            return Response({
+                'status': 'failed',
+                'reason': reason,
+                'message': 'Access denied. Your membership is inactive. Please renew your membership.'
+            }, status=403)
+
+        # Check tier access
         user_tier = user.type_of_membership
         required_tier = facility.required_tier
 
