@@ -1,11 +1,13 @@
 import qrcode
 import json
+import uuid
 from io import BytesIO
 from django.core.files.base import ContentFile
 from django.db import models
 from django.conf import settings
 
 class Facility(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
     required_tier = models.CharField(
         max_length=10,
@@ -19,7 +21,7 @@ class Facility(models.Model):
     def generate_qr_code(self):
         """Generate a QR code for the facility and save it."""
         data = json.dumps({
-            "id": self.id,
+            "uuid": str(self.uuid),
             "name": self.name,
             "required_tier": self.required_tier
         })
@@ -32,17 +34,15 @@ class Facility(models.Model):
 
         # Clean the facility name to be filename-safe
         safe_name = self.name.lower().replace(' ', '_')
-        filename = f"{safe_name}_qr_facilityid_{self.id}.png"
+        filename = f"{safe_name}_qr_{self.uuid}.png"
 
         self.qr_code.save(filename, ContentFile(buffer.getvalue()), save=False)
 
     def save(self, *args, **kwargs):
-        """Generate QR code only after the object is saved."""
-        if not self.pk:  # Only run before the first save
+        if not self.pk:
             super().save(*args, **kwargs)
         self.generate_qr_code()
-        super().save(update_fields=['qr_code'])  # Save only the QR code field
-
+        super().save(update_fields=['qr_code'])
 
 class AccessLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

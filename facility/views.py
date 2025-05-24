@@ -22,17 +22,18 @@ class QRScanView(APIView):
             return Response({'error': 'QR Code data is missing'}, status=400)
 
         try:
-            # Parse JSON string inside qrCode
             qr_data = json.loads(qr_code_data)
-            facility_id = qr_data.get("id")  # Extract facility ID
-        except (json.JSONDecodeError, KeyError, TypeError):
+            facility_uuid = qr_data.get("uuid")
+            if not facility_uuid:
+                raise ValueError("Missing UUID")
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
             return Response({'error': 'Invalid QR code format'}, status=400)
 
         user = request.user
 
         # Validate facility existence
         try:
-            facility = Facility.objects.get(id=facility_id)
+            facility = Facility.objects.get(uuid=facility_uuid)
         except Facility.DoesNotExist:
             return Response({'error': 'Facility not found'}, status=404)
 
