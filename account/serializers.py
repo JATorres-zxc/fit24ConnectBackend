@@ -30,7 +30,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
-            is_trainer=is_trainer
+            is_trainer=is_trainer,
+            is_active=False,  # New users are inactive by default
+            membership_start_date=None,  # No start date initially
+            membership_end_date=None,  # No end date initially
         )
         return user
 
@@ -78,13 +81,12 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             raise serializers.ValidationError("Invalid credentials")
         if not user.is_active:
-            raise serializers.ValidationError("User account is inactive")
-
-        tokens = self.get_tokens_for_user(user)
-
+            if not user.membership_start_date or not user.membership_end_date:
+                raise serializers.ValidationError("Your account is pending activation. Please contact admin.")
+            raise serializers.ValidationError("Your membership is not currently active. Please check your membership dates.")
         return {
             "user": user,
-            "tokens": tokens,
+            "tokens": self.get_tokens_for_user(user),
         }
 
     def get_tokens_for_user(self, user):
@@ -118,12 +120,28 @@ class MembershipStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['membership_start_date', 'membership_end_date']
+        extra_kwargs = {
+            'membership_start_date': {'required': True},
+            'membership_end_date': {'required': True},
+        }
 
     def validate(self, data):
-        start_date = data.get('membership_start_date', self.instance.membership_start_date)
-        end_date = data.get('membership_end_date', self.instance.membership_end_date)
+        start_date = data.get('membership_start_date')
+        end_date = data.get('membership_end_date')
 
-        if start_date and end_date and end_date < start_date:
+        if not start_date or not end_date:
+            raise serializers.ValidationError("Both start and end dates are required.")
+
+        if end_date < start_date:
             raise serializers.ValidationError("End date must be after start date.")
 
         return data
+
+    def update(self, instance, validated_data):
+        # Update the dates
+        instance.membership_start_date = validated_data['membership_start_date']
+        instance.membership_end_date = validated_data['membership_end_date']
+
+        # This will automatically update is_active via the save() method
+        instance.save()
+        return instance
