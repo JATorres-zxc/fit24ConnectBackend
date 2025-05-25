@@ -36,7 +36,7 @@ class GenerateReportView(APIView):
             }, status=400)
 
     def generate_membership_report(self, start_date, end_date):
-        users = CustomUser.objects.all().order_by('-date_joined')
+        users = CustomUser.objects.filter(is_admin=False).order_by('-date_joined')
 
         if start_date:
             users = users.filter(date_joined__date__gte=start_date)
@@ -149,7 +149,7 @@ class FacilityAccessSummaryView(APIView):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
         
-        logs = AccessLog.objects.all()
+        logs = AccessLog.objects.filter(user__is_admin=False)
         
         if facility_id:
             logs = logs.filter(facility_id=facility_id)

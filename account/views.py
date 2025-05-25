@@ -281,15 +281,16 @@ class MembershipStatusUpdateView(APIView):
 
     def patch(self, request, user_id):
         try:
-            member = CustomUser.objects.get(id=user_id, is_trainer=False, is_admin=False)
+            member = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
-            return Response({"error": "Member not found."}, status=404)
+            return Response({"error": "User not found."}, status=404)
 
-        serializer = MembershipStatusUpdateSerializer(member, data=request.data, partial=True)
+        serializer = MembershipStatusUpdateSerializer(member, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({
-                "message": f"Membership status updated to {'active' if member.is_membership_active else 'inactive'}.",
+                "message": "Membership dates updated successfully.",
+                "is_active": member.is_active,
                 "data": serializer.data
             })
         return Response(serializer.errors, status=400)

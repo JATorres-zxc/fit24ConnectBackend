@@ -69,11 +69,20 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_membership_active(self):
-        """Check if the user's membership is currently active."""
-        if self.membership_end_date:
-            return self.membership_end_date >= date.today()
-        return False
-    
+        """Check if the user's membership is currently active based on dates."""
+        today = date.today()
+
+        # If no dates at all → inactive
+        if not self.membership_start_date and not self.membership_end_date:
+            return False
+
+        # Must have both dates to be active
+        if not self.membership_start_date or not self.membership_end_date:
+            return False
+
+        # Check date ranges
+        return (self.membership_start_date <= today <= self.membership_end_date)
+
     @property
     def role(self):
         if self.is_admin:
@@ -88,6 +97,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         if self.is_trainer and not hasattr(self, 'trainer_profile'):
             Trainer.objects.create(user=self)
         return self.trainer_profile
+    
+    def save(self, *args, **kwargs):
+        """Automatically update is_active based on membership dates."""
+        # For non-staff/superusers, update is_active based on membership
+        if not self.is_superuser and not self.is_staff:
+            self.is_active = self.is_membership_active
+
+        super().save(*args, **kwargs)
 
 class Trainer(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="trainer_profile")

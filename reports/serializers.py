@@ -15,7 +15,7 @@ class FacilityReportSerializer(serializers.ModelSerializer):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
 
-        logs = AccessLog.objects.filter(facility=facility).select_related('user')
+        logs = AccessLog.objects.filter(facility=facility, user__is_admin=False).select_related('user')
 
         if start_date:
             logs = logs.filter(timestamp__date__gte=start_date)
@@ -38,6 +38,9 @@ class MembershipReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['id', 'full_name', 'email', 'type_of_membership', 'is_active', 'membership_start_date', 'membership_end_date']
+        
+    def get_queryset(self):
+        return super().get_queryset().filter(is_admin=False)
 
 class ReportSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
