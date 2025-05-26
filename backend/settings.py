@@ -62,6 +62,12 @@ INSTALLED_APPS = [
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
+AUTHENTICATION_BACKENDS = [
+    'account.authentication.EmailBackend',  # Replace `account` with your app name
+    'django.contrib.auth.backends.ModelBackend',  # keep this as fallback
+]
+
+
 CELERY_ENABLE_UTC = True
 CELERY_TIMEZONE = 'Asia/Manila'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
