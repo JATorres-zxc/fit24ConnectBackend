@@ -102,8 +102,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         """Automatically update is_active based on membership dates."""
         # For non-staff/superusers, update is_active based on membership
         if not self.is_superuser and not self.is_staff:
-            self.is_active = self.is_membership_active
-
+            if self.membership_start_date and self.membership_end_date:
+                self.is_active = self.is_membership_active
+            else:
+                self.is_active = False
         super().save(*args, **kwargs)
 
 class Trainer(models.Model):

@@ -79,11 +79,11 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, data):
         user = authenticate(email=data["email"], password=data["password"])
         if not user:
-            raise serializers.ValidationError("Invalid credentials")
+            raise serializers.ValidationError({"non_field_errors": ["Invalid credentials"]})
         if not user.is_active:
             if not user.membership_start_date or not user.membership_end_date:
-                raise serializers.ValidationError("Your account is pending activation. Please contact admin.")
-            raise serializers.ValidationError("Your membership is not currently active. Please check your membership dates.")
+                raise serializers.ValidationError({"non_field_errors": ["Your account is pending activation. Please contact admin."]})
+            raise serializers.ValidationError({"non_field_errors": ["Your membership is not currently active. Please check your membership dates."]})
         return {
             "user": user,
             "tokens": self.get_tokens_for_user(user),
