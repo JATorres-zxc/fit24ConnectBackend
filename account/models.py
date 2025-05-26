@@ -99,11 +99,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.trainer_profile
     
     def save(self, *args, **kwargs):
-        if not self.is_superuser and not self.is_staff and not self.is_trainer:
+        # Ensure trainers are always active
+        if self.is_trainer:
+            self.is_active = True
+        elif not self.is_superuser and not self.is_staff:
+            # Only update is_active for regular users
             if self.membership_start_date and self.membership_end_date:
                 self.is_active = self.is_membership_active
             else:
                 self.is_active = False
+
         super().save(*args, **kwargs)
 
 class Trainer(models.Model):
