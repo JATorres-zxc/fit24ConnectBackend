@@ -31,9 +31,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             password=validated_data['password'],
             is_trainer=is_trainer,
-            is_active=False,  # New users are inactive by default
-            membership_start_date=None,  # No start date initially
-            membership_end_date=None,  # No end date initially
+            is_active=True if is_trainer else False, # Trainers active by default
+            membership_start_date=None,
+            membership_end_date=None,
         )
         return user
 
