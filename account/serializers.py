@@ -81,20 +81,16 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             raise serializers.ValidationError({"non_field_errors": ["Invalid credentials"]})
 
-        if not user.is_active:
-            # If user is a trainer, skip membership date check
-            if user.is_trainer:
+        # Skip activation and membership checks if user is a trainer
+        if not user.is_trainer:
+            if not user.is_active:
+                if not user.membership_start_date or not user.membership_end_date:
+                    raise serializers.ValidationError({
+                        "non_field_errors": ["Your account is pending activation. Please contact admin."]
+                    })
                 raise serializers.ValidationError({
-                    "non_field_errors": ["Your trainer account is pending activation. Please contact admin."]
+                    "non_field_errors": ["Your membership is not currently active. Please check your membership dates."]
                 })
-            # For normal users, check membership dates
-            if not user.membership_start_date or not user.membership_end_date:
-                raise serializers.ValidationError({
-                    "non_field_errors": ["Your account is pending activation. Please contact admin."]
-                })
-            raise serializers.ValidationError({
-                "non_field_errors": ["Your membership is not currently active. Please check your membership dates."]
-            })
 
         return {
             "user": user,
