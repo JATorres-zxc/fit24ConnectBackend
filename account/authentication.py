@@ -5,7 +5,7 @@ UserModel = get_user_model()
 
 class EmailBackend(ModelBackend):
     def authenticate(self, request, email=None, password=None, **kwargs):
-        print(f"Trying to authenticate {email}")  # ← Debug print here
+        print(f"Trying to authenticate {email}")
 
         try:
             user = UserModel.objects.get(email=email)
@@ -13,9 +13,9 @@ class EmailBackend(ModelBackend):
             print("User not found")
             return None
 
-        if user.check_password(password) and self.user_can_authenticate(user):
-            print("Authentication successful")
-            return user
+        if user.check_password(password):
+            print("Authentication successful or inactive")
+            return user  # Do NOT check is_active here
 
-        print("Authentication failed: wrong password or inactive")
+        print("Authentication failed: wrong password")
         return None
