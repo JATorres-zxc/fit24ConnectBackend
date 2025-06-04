@@ -172,7 +172,12 @@ class TrainerListView(ListAPIView):
 
 
 class MemberListView(ListAPIView):
-    queryset = CustomUser.objects.filter(is_trainer=False, is_admin=False)
+    queryset = CustomUser.objects.filter(
+        is_trainer=False,
+        is_admin=False,
+        is_superuser=False,
+        is_staff=False
+    )
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
